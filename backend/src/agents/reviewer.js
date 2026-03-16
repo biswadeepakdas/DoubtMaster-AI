@@ -1,10 +1,12 @@
 /**
  * Reviewer Agent — Quality gate for all solutions
  * Independently verifies correctness, format, and grade-appropriateness
+ * Uses Sarvam AI for LLM-based independent verification
  */
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { callLLMJson } from '../services/llm.js';
 import { logger } from '../utils/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,14 +23,68 @@ export class ReviewerAgent {
   async process(solution) {
     const { question, steps, finalAnswer } = solution;
 
-    // In production: send to LLM for independent verification
-    // const review = await this.llm.call({
-    //   systemPrompt: SYSTEM_PROMPT,
-    //   userPrompt: JSON.stringify({ question: question.full_text, solution: { steps, finalAnswer } }),
-    //   model: 'claude-3.5-sonnet', // Use same or better model for verification
-    // });
-
     // Run local checks first (fast, no LLM cost)
+    const localIssues = this.runLocalChecks(question, steps, finalAnswer);
+
+    // If local checks find high-severity issues, skip expensive LLM review
+    const highLocalIssues = localIssues.filter((i) => i.severity === 'high');
+    if (highLocalIssues.length > 0) {
+      return this.buildVerdict(question, localIssues);
+    }
+
+    // Run LLM-based independent verification
+    let llmIssues = [];
+    try {
+      llmIssues = await this.llmReview(question, steps, finalAnswer);
+    } catch (err) {
+      logger.warn(`LLM review failed, using local checks only: ${err.message}`);
+    }
+
+    const allIssues = [...localIssues, ...llmIssues];
+    return this.buildVerdict(question, allIssues);
+  }
+
+  /**
+   * LLM-based independent review via Sarvam AI
+   */
+  async llmReview(question, steps, finalAnswer) {
+    const userPrompt = JSON.stringify({
+      question: question.full_text || question.text || question,
+      grade: question.grade,
+      board: question.board || 'CBSE',
+      solution: { steps, finalAnswer },
+    });
+
+    try {
+      const review = await callLLMJson({
+        systemPrompt: SYSTEM_PROMPT,
+        userPrompt,
+        temperature: 0.2,
+      });
+
+      // Normalize the LLM response into our issues format
+      if (review.issues && Array.isArray(review.issues)) {
+        return review.issues;
+      }
+      if (review.verdict === 'FAIL') {
+        return [{
+          type: 'llm_verification_fail',
+          severity: 'high',
+          location: 'entire solution',
+          description: review.description || 'LLM reviewer flagged the solution as incorrect',
+          suggested_fix: review.your_independent_answer || 'Re-solve the problem',
+        }];
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Run fast local checks (no LLM cost)
+   */
+  runLocalChecks(question, steps, finalAnswer) {
     const issues = [];
 
     // Check 1: Solution has steps
@@ -70,7 +126,6 @@ export class ReviewerAgent {
 
     // Check 4: Grade appropriateness
     if (question.grade && steps) {
-      const avgStepLength = steps.reduce((sum, s) => sum + (s.work?.length || 0), 0) / steps.length;
       if (question.grade <= 3 && steps.length > 3) {
         issues.push({
           type: 'grade_mismatch',
@@ -84,7 +139,7 @@ export class ReviewerAgent {
 
     // Check 5: Math verification (basic)
     if (question.question_type === 'solve' && finalAnswer) {
-      const mathCheck = this.verifyBasicMath(question.full_text, finalAnswer);
+      const mathCheck = this.verifyBasicMath(question.full_text || '', finalAnswer);
       if (mathCheck && !mathCheck.correct) {
         issues.push({
           type: 'arithmetic_error',
@@ -96,7 +151,13 @@ export class ReviewerAgent {
       }
     }
 
-    // Determine verdict
+    return issues;
+  }
+
+  /**
+   * Build verdict from issues
+   */
+  buildVerdict(question, issues) {
     const highIssues = issues.filter((i) => i.severity === 'high');
     const mediumIssues = issues.filter((i) => i.severity === 'medium');
 
@@ -111,7 +172,7 @@ export class ReviewerAgent {
       qualityScore = Math.max(60, 100 - (mediumIssues.length * 10));
     }
 
-    logger.info(`Review verdict for ${question.question_id}: ${verdict} (score: ${qualityScore})`);
+    logger.info(`Review verdict for ${question.question_id || 'unknown'}: ${verdict} (score: ${qualityScore})`);
 
     return {
       question_id: question.question_id,
@@ -126,7 +187,6 @@ export class ReviewerAgent {
    * Basic math verification for simple equations
    */
   verifyBasicMath(questionText, answer) {
-    // Linear equation: ax + b = c
     const linearMatch = questionText.match(/(\d*)\s*x\s*([+-]\s*\d+)\s*=\s*(-?\d+)/);
     if (linearMatch) {
       const a = parseInt(linearMatch[1] || '1', 10);
@@ -143,6 +203,6 @@ export class ReviewerAgent {
         };
       }
     }
-    return null; // Can't verify — skip
+    return null;
   }
 }

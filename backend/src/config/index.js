@@ -30,6 +30,11 @@ const config = {
     openaiKey: process.env.OPENAI_API_KEY,
     anthropicKey: process.env.ANTHROPIC_API_KEY,
     googleKey: process.env.GOOGLE_AI_KEY,
+    nvidia: {
+      baseUrl: process.env.NVIDIA_API_BASE_URL || 'https://integrate.api.nvidia.com/v1',
+      apiKey: process.env.NVIDIA_API_KEY,
+      model: process.env.NVIDIA_MODEL || 'sarvamai/sarvam-m',
+    },
   },
 
   aws: {
