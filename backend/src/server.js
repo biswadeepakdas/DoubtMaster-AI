@@ -13,6 +13,7 @@ import userRoutes from './routes/user.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import schoolRoutes from './routes/school.js';
 import searchRoutes from './routes/search.js';
+import animationRoutes from './routes/animations.js';
 import webhookRoutes from './routes/webhooks.js';
 
 const app = express();
@@ -62,6 +63,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/school', schoolRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/animations', animationRoutes);
 
 // Error handling
 app.use(notFoundHandler);
