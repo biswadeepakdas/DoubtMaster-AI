@@ -35,6 +35,10 @@ const config = {
       apiKey: process.env.NVIDIA_API_KEY,
       model: process.env.NVIDIA_MODEL || 'sarvamai/sarvam-m',
     },
+    gemma: {
+      apiKey: process.env.GEMMA_API_KEY,
+      model: process.env.GEMMA_MODEL || 'google/gemma-3-27b-it',
+    },
   },
 
   aws: {

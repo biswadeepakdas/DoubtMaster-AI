@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { callLLMJson, callLLM } from './llm.js';
+import { callLLMJson, callLLM, callVision, MODELS } from './llm.js';
 import { logger } from '../utils/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -33,8 +33,11 @@ export async function solveQuestion({ id, userId, image, textQuestion, subject, 
   const classification = classifyQuestion(questionText, subject, grade);
   classification.board = board || 'CBSE';
 
-  // Generate solution via Sarvam AI
-  const solution = await generateSolution(questionText, classification, language);
+  // Select model: Sarvam for Indian languages, Gemma for English/fallback
+  const solveModel = selectModel(classification, language);
+
+  // Generate solution
+  const solution = await generateSolution(questionText, classification, language, solveModel);
 
   const result = {
     extractedText: questionText,
@@ -43,7 +46,7 @@ export async function solveQuestion({ id, userId, image, textQuestion, subject, 
     difficulty: classification.difficulty,
     confidence: solution.confidence || 0.95,
     solution,
-    modelUsed: 'sarvamai/sarvam-m',
+    modelUsed: solveModel,
   };
 
   // Cache the result
@@ -53,14 +56,37 @@ export async function solveQuestion({ id, userId, image, textQuestion, subject, 
 }
 
 /**
- * Extract text from image using OCR/Vision
+ * Extract text from image using Gemma 3 27B Vision via NVIDIA NIM
  */
 async function extractTextFromImage(imageBuffer) {
   if (!imageBuffer) throw new Error('No image provided');
 
-  // TODO: Integrate with vision model for real OCR
-  logger.info('OCR processing image...');
-  return 'Solve: Find the value of x in 2x + 5 = 15';
+  logger.info('OCR: Extracting question from image via Gemma 3 Vision...');
+
+  const base64 = Buffer.isBuffer(imageBuffer)
+    ? imageBuffer.toString('base64')
+    : imageBuffer; // Already base64
+
+  const extracted = await callVision({
+    imageBase64: base64,
+    prompt: `Extract ALL text from this homework/exam image accurately.
+
+RULES:
+- For mathematical equations, use LaTeX notation (e.g., $x^2 + 5x - 3 = 0$)
+- For chemical formulas, use proper notation (e.g., H₂SO₄)
+- Preserve question numbers (Q1, Q2, etc.)
+- If there are diagrams, describe them briefly in [brackets]
+- If text is in Hindi/Devanagari or other Indian languages, preserve the original script
+- If handwriting is unclear, mark uncertain parts with [?]
+- Separate multiple questions with "---"
+
+Output the extracted text, nothing else.`,
+    mimeType: 'image/jpeg',
+    maxTokens: 4096,
+  });
+
+  logger.info(`OCR extracted ${extracted.length} chars from image`);
+  return extracted;
 }
 
 /**
@@ -130,9 +156,27 @@ function classifyQuestion(text, hintSubject, hintGrade) {
 }
 
 /**
- * Generate step-by-step solution using Sarvam AI via NVIDIA NIM
+ * Select the best model based on language and difficulty.
+ * - Sarvam: Best for Indian languages (Hindi, Tamil, Telugu, etc.)
+ * - Gemma 3 27B: Best for English, complex reasoning, and as fallback
  */
-async function generateSolution(questionText, classification, language) {
+function selectModel(classification, language) {
+  const indianLanguages = ['hi', 'ta', 'te', 'kn', 'bn', 'mr', 'gu', 'ml', 'pa', 'od'];
+
+  // Use Sarvam for Indian language responses (it's specifically trained for these)
+  if (indianLanguages.includes(language)) return MODELS.SARVAM;
+
+  // Use Gemma for hard English questions (stronger reasoning)
+  if (classification.difficulty === 'hard' && language === 'en') return MODELS.GEMMA;
+
+  // Default to Sarvam (primary model)
+  return MODELS.SARVAM;
+}
+
+/**
+ * Generate step-by-step solution using NVIDIA NIM models
+ */
+async function generateSolution(questionText, classification, language, model) {
   const systemPrompt = buildSolverPrompt(classification, language);
 
   logger.info(`Solving: subject=${classification.subject}, topic=${classification.topic}, grade=${classification.grade}`);
@@ -141,6 +185,7 @@ async function generateSolution(questionText, classification, language) {
     const parsed = await callLLMJson({
       systemPrompt,
       userPrompt: questionText,
+      model,
       temperature: 0.3,
     });
 
@@ -154,11 +199,14 @@ async function generateSolution(questionText, classification, language) {
     };
   } catch (err) {
     logger.error(`LLM solve failed: ${err.message}`);
-    // Fallback: return raw text response as a single step
+    // Fallback: try alternate model, or return raw text
+    const fallbackModel = model === MODELS.SARVAM ? MODELS.GEMMA : MODELS.SARVAM;
+    logger.info(`Trying fallback model: ${fallbackModel}`);
     try {
       const rawText = await callLLM({
         systemPrompt: systemPrompt.replace('Return a JSON object', 'Provide a clear step-by-step solution in plain text'),
         userPrompt: questionText,
+        model: fallbackModel,
         temperature: 0.5,
       });
 
