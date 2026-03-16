@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
 import { solveLimiter } from '../middleware/rateLimiter.js';
@@ -7,29 +6,22 @@ import { validate, schemas } from '../middleware/validate.js';
 import { AppError } from '../middleware/error.js';
 import { solveQuestion, evaluateLearnMode } from '../services/solver.js';
 import { logger } from '../utils/logger.js';
+import supabase from '../db/supabase.js';
 
 const router = Router();
 
-// Multer config for image uploads (10MB max)
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new AppError('Only JPEG, PNG, WebP, HEIC images allowed', 400, 'INVALID_FILE'));
-    }
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new AppError('Only JPEG, PNG, WebP, HEIC images allowed', 400, 'INVALID_FILE'));
   },
   storage: multer.memoryStorage(),
 });
 
-// In-memory question store (replace with DB in production)
-const questions = new Map();
-
 /**
- * POST /api/questions/solve
- * Upload image → get AI solution
+ * POST /api/questions/solve — Image upload → AI solution
  */
 router.post('/solve', authenticate, solveLimiter, upload.single('image'), async (req, res, next) => {
   try {
@@ -39,13 +31,9 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       throw new AppError('Image or text question required', 400, 'VALIDATION_ERROR');
     }
 
-    const questionId = uuidv4();
     const startTime = Date.now();
 
-    logger.info(`Solving question ${questionId} for user ${req.user.id}`);
-
     const result = await solveQuestion({
-      id: questionId,
       userId: req.user.id,
       image: req.file?.buffer,
       textQuestion: req.body.textQuestion,
@@ -56,23 +44,48 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       userPlan: req.user.plan,
     });
 
-    const question = {
-      id: questionId,
-      userId: req.user.id,
-      extractedText: result.extractedText,
+    const solveTimeMs = Date.now() - startTime;
+
+    // Save question to DB
+    const { data: question, error: qErr } = await supabase.from('questions').insert({
+      user_id: req.user.id,
+      text: result.extractedText,
       subject: result.subject,
       topic: result.topic,
-      class: grade,
-      board,
-      solution: result.solution,
-      createdAt: new Date().toISOString(),
-      solveTimeMs: Date.now() - startTime,
-    };
+      class: grade ? parseInt(grade, 10) : null,
+      board: board || 'CBSE',
+      difficulty: result.difficulty,
+      language: language || 'en',
+      source: req.file ? 'image' : 'text',
+      solve_time_ms: solveTimeMs,
+    }).select().single();
 
-    questions.set(questionId, question);
+    if (qErr) logger.error(`Failed to save question: ${qErr.message}`);
+
+    // Save solution to DB
+    if (question) {
+      const { error: sErr } = await supabase.from('solutions').insert({
+        question_id: question.id,
+        steps: result.solution.steps,
+        final_answer: result.solution.finalAnswer || '',
+        confidence: result.confidence,
+        model_used: result.modelUsed,
+        concept_tags: result.solution.conceptTags || [],
+        related_pyqs: result.solution.relatedPYQs || [],
+        alternative_method: result.solution.alternativeMethod,
+        from_cache: result.fromCache || false,
+      });
+      if (sErr) logger.error(`Failed to save solution: ${sErr.message}`);
+
+      // Increment user solve count
+      await supabase.rpc('increment_solve_count', { user_id_param: req.user.id }).catch(() => {
+        // Fallback if RPC doesn't exist yet
+        supabase.from('users').update({ solve_count: supabase.raw('solve_count + 1') }).eq('id', req.user.id);
+      });
+    }
 
     res.json({
-      questionId,
+      questionId: question?.id,
       extractedText: result.extractedText,
       subject: result.subject,
       topic: result.topic,
@@ -83,8 +96,7 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
         learnModeRequired: req.user.plan === 'free',
         totalSteps: result.solution.steps.length,
       },
-      solveTimeMs: Date.now() - startTime,
-      dailyRemaining: req.user.plan === 'free' ? 'Check X-RateLimit-Remaining header' : 'unlimited',
+      solveTimeMs,
     });
   } catch (error) {
     next(error);
@@ -92,21 +104,16 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
 });
 
 /**
- * POST /api/questions/text-solve
- * Text input → get solution
+ * POST /api/questions/text-solve — Text input → solution
  */
 router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQuestion), async (req, res, next) => {
   try {
     const { textQuestion, subject, class: grade, board, language } = req.validated;
-    if (!textQuestion) {
-      throw new AppError('Text question required', 400, 'VALIDATION_ERROR');
-    }
+    if (!textQuestion) throw new AppError('Text question required', 400, 'VALIDATION_ERROR');
 
-    const questionId = uuidv4();
     const startTime = Date.now();
 
     const result = await solveQuestion({
-      id: questionId,
       userId: req.user.id,
       textQuestion,
       subject,
@@ -116,18 +123,68 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
       userPlan: req.user.plan,
     });
 
-    questions.set(questionId, {
-      id: questionId,
-      userId: req.user.id,
-      extractedText: textQuestion,
-      ...result,
-      createdAt: new Date().toISOString(),
-    });
+    const solveTimeMs = Date.now() - startTime;
+
+    // Save to DB
+    const { data: question } = await supabase.from('questions').insert({
+      user_id: req.user.id,
+      text: textQuestion,
+      subject: result.subject,
+      topic: result.topic,
+      class: grade || null,
+      board: board || 'CBSE',
+      difficulty: result.difficulty,
+      language: language || 'en',
+      source: 'text',
+      solve_time_ms: solveTimeMs,
+    }).select().single();
+
+    if (question) {
+      await supabase.from('solutions').insert({
+        question_id: question.id,
+        steps: result.solution.steps,
+        final_answer: result.solution.finalAnswer || '',
+        confidence: result.confidence,
+        model_used: result.modelUsed,
+        concept_tags: result.solution.conceptTags || [],
+        from_cache: result.fromCache || false,
+      });
+    }
+
+    res.json({ questionId: question?.id, ...result, solveTimeMs });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/questions/history — User's question history
+ */
+router.get('/history', authenticate, async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const offset = (pageNum - 1) * limitNum;
+
+    const { data: questions, count } = await supabase
+      .from('questions')
+      .select('id, text, subject, topic, difficulty, created_at', { count: 'exact' })
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limitNum - 1);
 
     res.json({
-      questionId,
-      ...result,
-      solveTimeMs: Date.now() - startTime,
+      questions: (questions || []).map((q) => ({
+        id: q.id,
+        extractedText: q.text?.substring(0, 100),
+        subject: q.subject,
+        topic: q.topic,
+        createdAt: q.created_at,
+      })),
+      total: count || 0,
+      page: pageNum,
+      totalPages: Math.ceil((count || 0) / limitNum),
     });
   } catch (error) {
     next(error);
@@ -135,74 +192,75 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
 });
 
 /**
- * GET /api/questions/history
- * User's question history
+ * GET /api/questions/:id — Get question + solution
  */
-router.get('/history', authenticate, (req, res) => {
-  const { page = 1, limit = 20 } = req.query;
-  const userQuestions = [...questions.values()]
-    .filter((q) => q.userId === req.user.id)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+router.get('/:id', authenticate, async (req, res, next) => {
+  try {
+    const { data: question } = await supabase
+      .from('questions')
+      .select('*, solutions(*)')
+      .eq('id', req.params.id)
+      .single();
 
-  const start = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-  const paginated = userQuestions.slice(start, start + parseInt(limit, 10));
+    if (!question) return res.status(404).json({ error: 'Question not found' });
+    if (question.user_id !== req.user.id) return res.status(403).json({ error: 'Access denied' });
 
-  res.json({
-    questions: paginated.map((q) => ({
-      id: q.id,
-      extractedText: q.extractedText?.substring(0, 100),
-      subject: q.subject,
-      topic: q.topic,
-      createdAt: q.createdAt,
-    })),
-    total: userQuestions.length,
-    page: parseInt(page, 10),
-    totalPages: Math.ceil(userQuestions.length / parseInt(limit, 10)),
-  });
+    res.json({
+      id: question.id,
+      extractedText: question.text,
+      subject: question.subject,
+      topic: question.topic,
+      solution: question.solutions?.[0] || null,
+      createdAt: question.created_at,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
- * GET /api/questions/:id
- * Get specific question + solution
- */
-router.get('/:id', authenticate, (req, res) => {
-  const question = questions.get(req.params.id);
-  if (!question) {
-    return res.status(404).json({ error: 'Question not found' });
-  }
-  if (question.userId !== req.user.id) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-  res.json(question);
-});
-
-/**
- * POST /api/questions/:id/learn
- * Submit Learn Mode response for evaluation
+ * POST /api/questions/:id/learn — Submit Learn Mode response
  */
 router.post('/:id/learn', authenticate, async (req, res, next) => {
   try {
-    const question = questions.get(req.params.id);
-    if (!question) {
-      throw new AppError('Question not found', 404, 'NOT_FOUND');
-    }
+    const { data: question } = await supabase
+      .from('questions')
+      .select('*, solutions(*)')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!question) throw new AppError('Question not found', 404, 'NOT_FOUND');
 
     const { response } = req.body;
     if (!response || response.length < 10) {
       throw new AppError('Please provide a detailed explanation (min 10 characters)', 400, 'VALIDATION_ERROR');
     }
 
+    const solution = question.solutions?.[0];
     const evaluation = await evaluateLearnMode({
-      question: question.extractedText,
-      solution: question.solution,
+      question: question.text,
+      solution: {
+        steps: solution?.steps || [],
+        finalAnswer: solution?.final_answer,
+      },
       studentResponse: response,
+    });
+
+    // Save learn mode attempt
+    await supabase.from('learn_mode_attempts').insert({
+      user_id: req.user.id,
+      question_id: question.id,
+      student_response: response,
+      score: evaluation.score,
+      passed: evaluation.passed,
+      feedback: evaluation.feedback,
     });
 
     res.json({
       score: evaluation.score,
       passed: evaluation.passed,
       feedback: evaluation.feedback,
-      finalAnswer: evaluation.passed ? question.solution.finalAnswer : undefined,
+      finalAnswer: evaluation.passed ? solution?.final_answer : undefined,
       hint: !evaluation.passed ? evaluation.hint : undefined,
     });
   } catch (error) {

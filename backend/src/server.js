@@ -5,6 +5,7 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import config from './config/index.js';
 import { logger } from './utils/logger.js';
+import { testConnection } from './db/supabase.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import authRoutes from './routes/auth.js';
 import questionRoutes from './routes/questions.js';
@@ -70,8 +71,9 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, async () => {
   logger.info(`DoubtMaster API running on port ${config.port} (${config.nodeEnv})`);
+  await testConnection();
 });
 
 // Graceful shutdown
