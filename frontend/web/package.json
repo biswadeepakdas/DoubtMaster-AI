@@ -1,0 +1,33 @@
+{
+  "name": "doubtmaster-web",
+  "version": "1.0.0",
+  "description": "DoubtMaster AI Web Dashboard - Next.js 15",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.5.0",
+    "zustand": "^4.5.5",
+    "@tanstack/react-query": "^5.51.0",
+    "axios": "^1.7.4",
+    "katex": "^0.16.11",
+    "lucide-react": "^0.436.0",
+    "tailwindcss": "^4.0.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^5.5.0",
+    "postcss": "^8.4.0"
+  }
+}

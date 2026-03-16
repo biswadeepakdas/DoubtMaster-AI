@@ -1,0 +1,20 @@
+{
+  "name": "doubtmaster-ai-pipeline",
+  "version": "1.0.0",
+  "description": "DoubtMaster AI Pipeline - OCR, LLM, Math Engine",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "benchmark": "node src/benchmark.js"
+  },
+  "dependencies": {
+    "openai": "^4.56.0",
+    "@anthropic-ai/sdk": "^0.27.0",
+    "sharp": "^0.33.5",
+    "tesseract.js": "^5.1.0",
+    "mathjs": "^13.1.1",
+    "dotenv": "^16.4.5"
+  }
+}

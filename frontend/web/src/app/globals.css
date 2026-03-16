@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --secondary: #F59E0B;
+  --success: #10B981;
+  --error: #EF4444;
+  --background: #FFFFFF;
+  --surface: #F8FAFC;
+  --text: #1E293B;
+  --text-secondary: #64748B;
+  --border: #E2E8F0;
+}
+
+.dark {
+  --background: #0F172A;
+  --surface: #1E293B;
+  --text: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --border: #334155;
+}
+
+body {
+  font-family: 'Inter', 'Noto Sans Devanagari', sans-serif;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+/* KaTeX math rendering */
+.katex-display {
+  margin: 0.5em 0;
+  overflow-x: auto;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* Pulse animation for camera button */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s infinite;
+}

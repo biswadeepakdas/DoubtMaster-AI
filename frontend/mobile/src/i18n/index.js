@@ -1,0 +1,116 @@
+/**
+ * i18n - Internationalization for Indian languages
+ * Supports: English, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Malayalam, Punjabi, Odia
+ */
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+const resources = {
+  en: {
+    translation: {
+      app_name: 'DoubtMaster AI',
+      tagline: 'Understand, Don\'t Just See the Answer',
+      home: 'Home',
+      solve: 'Solve',
+      progress: 'Progress',
+      profile: 'Profile',
+      photo_solve: 'Photo Solve',
+      text_solve: 'Type Your Question',
+      take_photo: 'Take a photo of any question',
+      solving: 'Solving...',
+      solve_now: 'Solve Now',
+      retake: 'Retake',
+      gallery: 'Gallery',
+      flash: 'Flash',
+      ncert: 'NCERT Solutions',
+      jee_neet: 'JEE / NEET',
+      mock_test: 'Mock Tests',
+      daily_goal: 'Daily Goal',
+      streak: 'Streak',
+      accuracy: 'Accuracy',
+      learn_mode: 'Learn Mode',
+      learn_mode_desc: 'Explain what you understood before seeing the answer',
+      check_understanding: 'Check Understanding',
+      final_answer: 'Final Answer',
+      upgrade_pro: 'Upgrade to Pro',
+      upgrade_desc: 'Unlimited solves at just Rs.49/month',
+      free: 'Free',
+      pro: 'Pro',
+      settings: 'Settings',
+      language: 'Language',
+      dark_mode: 'Dark Mode',
+      offline_mode: 'Offline Mode',
+      logout: 'Logout',
+    },
+  },
+  hi: {
+    translation: {
+      app_name: 'DoubtMaster AI',
+      tagline: 'समझो, सिर्फ़ Answer मत देखो',
+      home: 'होम',
+      solve: 'हल करें',
+      progress: 'प्रगति',
+      profile: 'प्रोफ़ाइल',
+      photo_solve: 'फ़ोटो से हल करें',
+      text_solve: 'सवाल टाइप करें',
+      take_photo: 'किसी भी सवाल की फ़ोटो लें',
+      solving: 'हल हो रहा है...',
+      solve_now: 'अभी हल करें',
+      retake: 'दोबारा लें',
+      gallery: 'गैलरी',
+      flash: 'फ़्लैश',
+      ncert: 'NCERT समाधान',
+      jee_neet: 'JEE / NEET',
+      mock_test: 'मॉक टेस्ट',
+      daily_goal: 'आज का लक्ष्य',
+      streak: 'लगातार दिन',
+      accuracy: 'सटीकता',
+      learn_mode: 'सीखो मोड',
+      learn_mode_desc: 'उत्तर देखने से पहले बताओ कि क्या समझ आया',
+      check_understanding: 'समझ जांचें',
+      final_answer: 'अंतिम उत्तर',
+      upgrade_pro: 'Pro में अपग्रेड करें',
+      upgrade_desc: 'सिर्फ़ ₹49/महीने में असीमित हल',
+      free: 'मुफ़्त',
+      pro: 'प्रो',
+      settings: 'सेटिंग्स',
+      language: 'भाषा',
+      dark_mode: 'डार्क मोड',
+      offline_mode: 'ऑफ़लाइन मोड',
+      logout: 'लॉग आउट',
+    },
+  },
+  ta: {
+    translation: {
+      app_name: 'DoubtMaster AI',
+      tagline: 'புரிந்துகொள், பதிலை மட்டும் பார்க்காதே',
+      home: 'முகப்பு',
+      solve: 'தீர்க்க',
+      progress: 'முன்னேற்றம்',
+      profile: 'சுயவிவரம்',
+      photo_solve: 'புகைப்படம் எடுத்து தீர்க்க',
+      text_solve: 'கேள்வியை தட்டச்சு செய்யவும்',
+      ncert: 'NCERT தீர்வுகள்',
+      learn_mode: 'கற்றல் பயன்முறை',
+      final_answer: 'இறுதி பதில்',
+    },
+  },
+  te: {
+    translation: {
+      app_name: 'DoubtMaster AI',
+      tagline: 'అర్థం చేసుకో, జవాబు మాత్రమే చూడకు',
+      home: 'హోమ్',
+      solve: 'సాల్వ్',
+      progress: 'ప్రగతి',
+    },
+  },
+};
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: 'en',
+  fallbackLng: 'en',
+  interpolation: { escapeValue: false },
+});
+
+export default i18n;
