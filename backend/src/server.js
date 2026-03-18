@@ -22,9 +22,9 @@ const app = express();
 // Security
 app.use(helmet());
 app.use(cors({
-  origin: config.isDev
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : (config.isDev
     ? ['http://localhost:3000', 'http://localhost:8081']
-    : ['https://doubtmaster.ai', 'https://app.doubtmaster.ai'],
+    : ['https://doubtmaster.ai', 'https://app.doubtmaster.ai']),
   credentials: true,
 }));
 
