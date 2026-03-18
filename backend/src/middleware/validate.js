@@ -26,7 +26,7 @@ export const schemas = {
     email: z.string().email('Invalid email').optional(),
     name: z.string().min(2).max(100),
     class: z.number().int().min(6).max(12),
-    board: z.enum(['CBSE', 'ICSE', 'STATE_MH', 'STATE_KA', 'STATE_TN', 'STATE_UP', 'STATE_OTHER']),
+    board: z.enum(['CBSE', 'ICSE', 'State Board', 'JEE', 'NEET', 'STATE_MH', 'STATE_KA', 'STATE_TN', 'STATE_UP', 'STATE_OTHER']),
     language: z.enum(['en', 'hi', 'ta', 'te', 'kn', 'bn', 'mr', 'gu', 'ml', 'pa', 'od']).default('en'),
   }).refine((data) => data.phone || data.email, {
     message: 'Either phone or email is required',

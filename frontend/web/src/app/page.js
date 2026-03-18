@@ -1,185 +1,634 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Camera, BookOpen, Brain, Globe, Smartphone, Target,
+  BarChart3, School, IndianRupee, Sun, Moon, Menu, X,
+  ChevronRight, Star, Check, X as XIcon, Zap, Shield,
+  MessageCircle, Users, Download, ArrowRight, Play,
+  Sparkles, GraduationCap, Languages, Wifi, WifiOff,
+  Heart, Twitter, Instagram, Youtube, Linkedin,
+  Mail, Phone, MapPin
+} from 'lucide-react';
 
+/* -------------------------------------------------- */
+/* Animated counter hook                               */
+/* -------------------------------------------------- */
+function useCounter(target, duration = 2000, startOnView = true) {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (!startOnView) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const startTime = performance.now();
+          const step = (now) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.floor(eased * target));
+            if (progress < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target, duration, startOnView]);
+
+  return [count, ref];
+}
+
+/* -------------------------------------------------- */
+/* Intersection observer hook for entrance animations  */
+/* -------------------------------------------------- */
+function useInView(threshold = 0.15) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setInView(true); },
+      { threshold }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [threshold]);
+  return [ref, inView];
+}
+
+/* -------------------------------------------------- */
+/* Main Landing Page                                   */
+/* -------------------------------------------------- */
 export default function LandingPage() {
-  const [email, setEmail] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [annual, setAnnual] = useState(true);
+
+  // Counters
+  const [students, studentsRef] = useCounter(1000000, 2500);
+  const [questions, questionsRef] = useCounter(50000, 2000);
+  const [accuracy, accuracyRef] = useCounter(995, 2000);
+  const [languages, languagesRef] = useCounter(11, 1500);
+
+  // Section observers
+  const [featuresRef, featuresInView] = useInView();
+  const [howRef, howInView] = useInView();
+  const [pricingRef, pricingInView] = useInView();
+  const [ctaRef, ctaInView] = useInView();
+
+  // Dark mode toggle
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  const navLinks = [
+    { href: '#features', label: 'Features' },
+    { href: '#how-it-works', label: 'How It Works' },
+    { href: '#pricing', label: 'Pricing' },
+    { href: '/login', label: 'Login' },
+  ];
+
+  const features = [
+    { icon: Camera, title: 'Photo Solve', desc: 'Snap any question -- printed or handwritten. Our AI reads Hindi, Tamil, Telugu and more.', color: 'from-teal-500 to-emerald-500' },
+    { icon: Brain, title: 'Learn Mode', desc: "Don't just copy answers. Explain what you understood, then see the solution. Actually learn!", color: 'from-amber-500 to-orange-500' },
+    { icon: BookOpen, title: 'NCERT Exact Match', desc: 'Solutions mapped exactly to NCERT textbooks. Chapter, exercise, question number -- all matched.', color: 'from-emerald-500 to-teal-500' },
+    { icon: Languages, title: '11 Languages', desc: 'Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Malayalam, Punjabi, Odia + English.', color: 'from-blue-500 to-cyan-500' },
+    { icon: Smartphone, title: 'Works on Any Phone', desc: 'Under 5 MB app. Works on 2GB RAM phones. Offline mode for exam week. Low-data friendly.', color: 'from-pink-500 to-rose-500' },
+    { icon: Target, title: 'JEE/NEET Deep Solve', desc: 'Trained on 50,000+ PYQs. Concept tagging, alternative methods, and accuracy above 98%.', color: 'from-teal-500 to-teal-500' },
+    { icon: BarChart3, title: 'Smart Progress', desc: 'AI detects your weak topics. Daily streak, subject mastery, personalized practice.', color: 'from-cyan-500 to-blue-500' },
+    { icon: School, title: 'Teacher Dashboard', desc: 'Schools get free analytics. See which students need help. Anti-cheating watermarks.', color: 'from-green-500 to-emerald-500' },
+    { icon: IndianRupee, title: 'India-Priced', desc: "Free NCERT forever. Pro at just Rs.49/month. 25x cheaper than the competition. Real value.", color: 'from-amber-500 to-yellow-500' },
+  ];
+
+  const steps = [
+    { num: 1, icon: Camera, title: 'Snap a Photo', desc: 'Take a picture of any question from your textbook, notebook, or screen.' },
+    { num: 2, icon: Sparkles, title: 'AI Solves Step-by-Step', desc: 'Our AI breaks down the solution with clear steps, formulas, and explanations.' },
+    { num: 3, icon: GraduationCap, title: 'Learn the Concept', desc: 'Understand the "why" behind each step. Build real knowledge, not just answers.' },
+  ];
+
+  const boards = ['CBSE', 'ICSE', 'JEE', 'NEET', 'State Boards'];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navbar */}
-      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-lg border-b border-gray-100 z-50">
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-[#0F172A]' : 'bg-white'}`}>
+
+      {/* ========== NAVBAR ========== */}
+      <nav className="fixed top-0 w-full z-50 glass">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
               <span className="text-white font-bold text-sm">D</span>
             </div>
-            <span className="font-bold text-xl text-gray-900">DoubtMaster AI</span>
-          </div>
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-gray-600 hover:text-gray-900 text-sm font-medium">Features</a>
-            <a href="#pricing" className="text-gray-600 hover:text-gray-900 text-sm font-medium">Pricing</a>
-            <a href="#ncert" className="text-gray-600 hover:text-gray-900 text-sm font-medium">NCERT</a>
-            <a href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium">Login</a>
-            <a href="/signup" className="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-600 transition">
+            <span className={`font-bold text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              DoubtMaster <span className="text-teal-500">AI</span>
+            </span>
+          </a>
+
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-6">
+            {navLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className={`text-sm font-medium transition-colors ${
+                  darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {link.label}
+              </a>
+            ))}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`p-2 rounded-lg transition-colors ${
+                darkMode ? 'text-yellow-400 hover:bg-slate-800' : 'text-gray-500 hover:bg-gray-100'
+              }`}
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <a
+              href="/signup"
+              className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300 hover:-translate-y-0.5"
+            >
               Start Free
             </a>
           </div>
+
+          {/* Mobile hamburger */}
+          <div className="flex md:hidden items-center gap-3">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`p-2 rounded-lg ${darkMode ? 'text-yellow-400' : 'text-gray-500'}`}
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={`p-2 rounded-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}
+            >
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className={`md:hidden animate-slide-down border-t ${
+            darkMode ? 'bg-slate-900/95 border-slate-700' : 'bg-white/95 border-gray-100'
+          } backdrop-blur-lg`}>
+            <div className="px-4 py-4 space-y-3">
+              {navLinks.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block py-2 text-sm font-medium ${
+                    darkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+                >
+                  {link.label}
+                </a>
+              ))}
+              <a
+                href="/signup"
+                className="block w-full text-center bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-5 py-3 rounded-xl text-sm font-semibold"
+              >
+                Start Free
+              </a>
+            </div>
+          </div>
+        )}
       </nav>
 
-      {/* Hero */}
-      <section className="pt-32 pb-20 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <span>{'🎓'}</span> Trusted by 10 lakh+ Indian students
-          </div>
+      {/* ========== HERO ========== */}
+      <section className="relative pt-28 pb-20 px-4 overflow-hidden bg-gradient-hero bg-grid">
+        {/* Animated orbs */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-400/20 rounded-full blur-3xl animate-orb pointer-events-none" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-400/15 rounded-full blur-3xl animate-orb-delayed pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl animate-orb pointer-events-none" />
 
-          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight mb-6">
-            Samjho, Sirf<br />
-            <span className="text-indigo-500">Answer Mat Dekho</span>
-          </h1>
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left text */}
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 px-4 py-2 rounded-full text-sm font-medium mb-6 animate-fade-in-up">
+                <GraduationCap size={16} />
+                <span>Trusted by 10 Lakh+ Indian Students</span>
+              </div>
 
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            India's smartest AI homework solver. Snap a photo, get step-by-step solutions for
-            NCERT, JEE, NEET — in Hindi and 10 regional languages. Free forever for NCERT.
-          </p>
+              <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 animate-fade-in-up delay-100 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}>
+                Samjho, Sirf{' '}
+                <br className="hidden sm:block" />
+                <span className="gradient-text">Answer Mat Dekho</span>
+              </h1>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <a href="/signup" className="bg-indigo-500 text-white px-8 py-4 rounded-xl text-lg font-bold hover:bg-indigo-600 transition pulse-glow">
-              Start Solving Free
-            </a>
-            <a href="#demo" className="bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-bold hover:bg-gray-200 transition">
-              Watch Demo
-            </a>
-          </div>
+              <p className={`text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 mb-8 animate-fade-in-up delay-200 ${
+                darkMode ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+                India's smartest AI homework solver. Snap a photo, get step-by-step solutions for
+                NCERT, JEE, NEET -- in Hindi and 10 regional languages. Free forever for NCERT.
+              </p>
 
-          <p className="text-sm text-gray-500">
-            No credit card required. Unlimited NCERT solutions free forever.
-          </p>
-        </div>
-      </section>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-6 animate-fade-in-up delay-300">
+                <a
+                  href="/signup"
+                  className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:shadow-xl hover:shadow-teal-500/25 transition-all duration-300 hover:-translate-y-1 pulse-glow"
+                >
+                  Start Solving Free
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </a>
+                <a
+                  href="#demo"
+                  className={`inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 hover:-translate-y-1 border ${
+                    darkMode
+                      ? 'bg-slate-800 text-gray-200 border-slate-700 hover:bg-slate-700'
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  <Play size={20} />
+                  Watch Demo
+                </a>
+              </div>
 
-      {/* Stats Bar */}
-      <section className="bg-indigo-500 py-12">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 px-4 text-center">
-          {[
-            { value: '99.5%', label: 'Accuracy on NCERT' },
-            { value: '< 3 sec', label: 'Solve Time' },
-            { value: '11', label: 'Languages Supported' },
-            { value: '₹0', label: 'For NCERT Solutions' },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <div className="text-3xl md:text-4xl font-extrabold text-white">{stat.value}</div>
-              <div className="text-indigo-200 text-sm mt-1">{stat.label}</div>
+              <p className={`text-sm animate-fade-in-up delay-400 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                No credit card required. Unlimited NCERT solutions free forever.
+              </p>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Features */}
-      <section id="features" className="py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-4">
-            Why Students Love DoubtMaster
-          </h2>
-          <p className="text-gray-600 text-center mb-16 max-w-2xl mx-auto">
-            Built exclusively for Indian students. Every feature designed for CBSE, ICSE, JEE, and NEET.
-          </p>
+            {/* Right: Phone mockup */}
+            <div className="hidden lg:flex justify-center animate-fade-in-up delay-300">
+              <div className="relative">
+                {/* Phone frame */}
+                <div className={`w-[280px] h-[560px] rounded-[3rem] border-4 p-3 shadow-2xl animate-float ${
+                  darkMode ? 'border-slate-600 bg-slate-800 shadow-teal-500/10' : 'border-gray-200 bg-white shadow-teal-500/10'
+                }`}>
+                  {/* Status bar */}
+                  <div className={`flex items-center justify-between px-4 py-2 text-xs ${
+                    darkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                    <span>9:41</span>
+                    <div className="flex gap-1">
+                      <Wifi size={12} />
+                      <div className="w-6 h-3 rounded-sm border border-current relative">
+                        <div className="absolute inset-0.5 right-1 bg-green-500 rounded-xs" />
+                      </div>
+                    </div>
+                  </div>
+                  {/* App content mockup */}
+                  <div className={`rounded-2xl p-4 h-full ${darkMode ? 'bg-slate-900' : 'bg-gray-50'}`}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-6 h-6 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-lg" />
+                      <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>DoubtMaster AI</span>
+                    </div>
+                    {/* Mock question card */}
+                    <div className={`rounded-xl p-3 mb-3 ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-sm`}>
+                      <div className={`text-xs font-medium mb-1 ${darkMode ? 'text-teal-400' : 'text-teal-600'}`}>Mathematics - Ch 3</div>
+                      <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Find the value of x in: 2x + 5 = 15</div>
+                    </div>
+                    {/* Mock step */}
+                    <div className={`rounded-xl p-3 mb-3 border-l-4 border-teal-500 ${darkMode ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
+                      <div className={`text-xs font-bold mb-1 ${darkMode ? 'text-teal-300' : 'text-teal-700'}`}>Step 1</div>
+                      <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>2x + 5 = 15</div>
+                      <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>2x = 15 - 5 = 10</div>
+                    </div>
+                    <div className={`rounded-xl p-3 mb-3 border-l-4 border-emerald-500 ${darkMode ? 'bg-emerald-500/10' : 'bg-emerald-50'}`}>
+                      <div className={`text-xs font-bold mb-1 ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>Step 2</div>
+                      <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>x = 10 / 2</div>
+                      <div className={`text-xs font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>x = 5</div>
+                    </div>
+                    {/* Mock camera button */}
+                    <div className="flex justify-center mt-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/30">
+                        <Camera size={24} className="text-white" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { icon: '📸', title: 'Photo Solve', desc: 'Snap any question — printed or handwritten. Our AI reads Hindi, Tamil, Telugu and more.' },
-              { icon: '🧠', title: 'Learn Mode', desc: 'Don\'t just copy answers. Explain what you understood, then see the solution. Actually learn!' },
-              { icon: '📚', title: 'NCERT Exact Match', desc: 'Solutions mapped exactly to NCERT textbooks. Chapter, exercise, question number — all matched.' },
-              { icon: '🗣️', title: '11 Languages', desc: 'Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Malayalam, Punjabi, Odia + English.' },
-              { icon: '📱', title: 'Works on Any Phone', desc: 'Under 5 MB app. Works on 2GB RAM phones. Offline mode for exam week. Low-data friendly.' },
-              { icon: '🎯', title: 'JEE/NEET Deep Solve', desc: 'Trained on 50,000+ PYQs. Concept tagging, alternative methods, and accuracy above 98%.' },
-              { icon: '📊', title: 'Smart Progress', desc: 'AI detects your weak topics. Daily streak, subject mastery, personalized practice.' },
-              { icon: '🏫', title: 'Teacher Dashboard', desc: 'Schools get free analytics. See which students need help. Anti-cheating watermarks.' },
-              { icon: '💰', title: 'India-Priced', desc: 'Free NCERT forever. Pro at just ₹49/month. 25x cheaper than BYJU\'s. Real value.' },
-            ].map((feature) => (
-              <div key={feature.title} className="p-6 rounded-2xl border border-gray-100 hover:border-indigo-200 hover:shadow-lg transition">
-                <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{feature.desc}</p>
+                {/* Floating badges around phone */}
+                <div className={`absolute -top-4 -right-12 px-3 py-2 rounded-xl text-xs font-bold shadow-lg animate-float-slow ${
+                  darkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  <div className="flex items-center gap-1"><Check size={12} /> 99.5% Accurate</div>
+                </div>
+                <div className={`absolute -bottom-2 -left-16 px-3 py-2 rounded-xl text-xs font-bold shadow-lg animate-float-reverse ${
+                  darkMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}>
+                  <div className="flex items-center gap-1"><Zap size={12} /> Under 3 sec</div>
+                </div>
+                <div className={`absolute top-1/2 -right-20 px-3 py-2 rounded-xl text-xs font-bold shadow-lg animate-float ${
+                  darkMode ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'bg-teal-50 text-teal-700 border border-teal-200'
+                }`}>
+                  <div className="flex items-center gap-1"><Globe size={12} /> 11 Languages</div>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="py-20 px-4 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-4">
-            Simple, Student-Friendly Pricing
-          </h2>
-          <p className="text-gray-600 text-center mb-16">Designed for Indian families. No hidden fees.</p>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Free */}
-            <div className="bg-white rounded-2xl p-8 border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900">Free (Muft)</h3>
-              <div className="mt-4 mb-6">
-                <span className="text-4xl font-extrabold text-gray-900">₹0</span>
-                <span className="text-gray-500 ml-1">forever</span>
+      {/* ========== SOCIAL PROOF / TRUST BAR ========== */}
+      <section className={`py-8 border-y ${darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-gray-50/80 border-gray-100'}`}>
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+            {/* Student count */}
+            <div className="flex items-center gap-2">
+              <Users size={18} className="text-teal-500" />
+              <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>10 Lakh+</span>
+              <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Students</span>
+            </div>
+            {/* Rating */}
+            <div className="flex items-center gap-1.5">
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star key={s} size={16} className="text-amber-400 fill-amber-400" />
+                ))}
               </div>
-              <ul className="space-y-3 text-sm text-gray-600 mb-8">
-                <li>{'✅'} Unlimited NCERT solutions (Class 6-12)</li>
-                <li>{'✅'} 20 JEE/NEET solves per day</li>
-                <li>{'✅'} Basic progress tracking</li>
-                <li>{'✅'} Hindi + English</li>
-                <li className="text-gray-400">{'❌'} Offline mode</li>
-                <li className="text-gray-400">{'❌'} Learn Mode</li>
+              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>4.8/5 Rating</span>
+            </div>
+            {/* Boards */}
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              {boards.map((board) => (
+                <span
+                  key={board}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    darkMode ? 'bg-slate-800 text-gray-300 border border-slate-700' : 'bg-white text-gray-600 border border-gray-200'
+                  }`}
+                >
+                  {board}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========== ANIMATED STATS ========== */}
+      <section className="bg-gradient-cta py-14 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-10" />
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 px-4 text-center relative z-10">
+          <div ref={studentsRef}>
+            <div className="text-3xl md:text-4xl font-extrabold text-white">{(students / 100000).toFixed(0)} Lakh+</div>
+            <div className="text-teal-200 text-sm mt-1">Happy Students</div>
+          </div>
+          <div ref={accuracyRef}>
+            <div className="text-3xl md:text-4xl font-extrabold text-white">{(accuracy / 10).toFixed(1)}%</div>
+            <div className="text-teal-200 text-sm mt-1">Accuracy on NCERT</div>
+          </div>
+          <div ref={languagesRef}>
+            <div className="text-3xl md:text-4xl font-extrabold text-white">{languages}</div>
+            <div className="text-teal-200 text-sm mt-1">Languages Supported</div>
+          </div>
+          <div ref={questionsRef}>
+            <div className="text-3xl md:text-4xl font-extrabold text-white">{(questions / 1000).toFixed(0)}K+</div>
+            <div className="text-teal-200 text-sm mt-1">PYQs Trained On</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========== FEATURES ========== */}
+      <section id="features" className={`py-20 px-4 ${darkMode ? '' : ''}`} ref={featuresRef}>
+        <div className="max-w-6xl mx-auto">
+          <div className={`text-center mb-16 ${featuresInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Why Students Love <span className="gradient-text">DoubtMaster</span>
+            </h2>
+            <p className={`max-w-2xl mx-auto ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Built exclusively for Indian students. Every feature designed for CBSE, ICSE, JEE, and NEET.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, i) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.title}
+                  className={`group p-6 rounded-2xl hover-card glass-card cursor-default ${
+                    featuresInView ? 'animate-fade-in-up' : 'opacity-0'
+                  }`}
+                  style={{ animationDelay: `${i * 0.08}s` }}
+                >
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon size={22} className="text-white" />
+                  </div>
+                  <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {feature.title}
+                  </h3>
+                  <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {feature.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ========== HOW IT WORKS ========== */}
+      <section id="how-it-works" className={`py-20 px-4 ${darkMode ? 'bg-slate-900/50' : 'bg-gray-50'}`} ref={howRef}>
+        <div className="max-w-5xl mx-auto">
+          <div className={`text-center mb-16 ${howInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              How It Works
+            </h2>
+            <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+              Three simple steps to master any concept
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 relative">
+            {/* Horizontal line behind */}
+            <div className="hidden md:block absolute top-16 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-500 opacity-30" />
+
+            {steps.map((step, i) => {
+              const Icon = step.icon;
+              return (
+                <div
+                  key={step.num}
+                  className={`text-center relative ${howInView ? 'animate-fade-in-up' : 'opacity-0'}`}
+                  style={{ animationDelay: `${i * 0.2}s` }}
+                >
+                  {/* Number circle */}
+                  <div className="flex justify-center mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-teal-500/20 relative z-10">
+                      <Icon size={28} className="text-white" />
+                    </div>
+                  </div>
+                  <div className={`inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider mb-3 ${
+                    darkMode ? 'text-teal-400' : 'text-teal-600'
+                  }`}>
+                    Step {step.num}
+                  </div>
+                  <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {step.title}
+                  </h3>
+                  <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {step.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ========== PRICING ========== */}
+      <section id="pricing" className="py-20 px-4" ref={pricingRef}>
+        <div className="max-w-5xl mx-auto">
+          <div className={`text-center mb-12 ${pricingInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Simple, Student-Friendly Pricing
+            </h2>
+            <p className={`mb-8 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Designed for Indian families. No hidden fees.
+            </p>
+
+            {/* Monthly/Annual toggle */}
+            <div className="inline-flex items-center gap-3 mb-2">
+              <span className={`text-sm font-medium ${!annual ? (darkMode ? 'text-white' : 'text-gray-900') : (darkMode ? 'text-gray-500' : 'text-gray-400')}`}>
+                Monthly
+              </span>
+              <button
+                onClick={() => setAnnual(!annual)}
+                className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${annual ? 'bg-teal-500' : (darkMode ? 'bg-slate-600' : 'bg-gray-300')}`}
+              >
+                <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${annual ? 'translate-x-7.5' : 'translate-x-0.5'}`} />
+              </button>
+              <span className={`text-sm font-medium ${annual ? (darkMode ? 'text-white' : 'text-gray-900') : (darkMode ? 'text-gray-500' : 'text-gray-400')}`}>
+                Annual
+              </span>
+              {annual && (
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded-full">
+                  Save up to 33%
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className={`grid md:grid-cols-3 gap-6 ${pricingInView ? '' : ''}`}>
+            {/* Free */}
+            <div className={`rounded-2xl p-8 hover-card ${
+              pricingInView ? 'animate-fade-in-up delay-100' : 'opacity-0'
+            } ${darkMode ? 'bg-slate-800/50 border border-slate-700' : 'bg-white border border-gray-200'}`}>
+              <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Free (Muft)</h3>
+              <div className="mt-4 mb-6">
+                <span className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-gray-900'}`}>&#8377;0</span>
+                <span className={`ml-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>forever</span>
+              </div>
+              <ul className="space-y-3 text-sm mb-8">
+                {[
+                  [true, 'Unlimited NCERT solutions (Class 6-12)'],
+                  [true, '20 JEE/NEET solves per day'],
+                  [true, 'Basic progress tracking'],
+                  [true, 'Hindi + English'],
+                  [false, 'Offline mode'],
+                  [false, 'Learn Mode'],
+                ].map(([included, text]) => (
+                  <li key={text} className={`flex items-center gap-2 ${
+                    included
+                      ? (darkMode ? 'text-gray-300' : 'text-gray-600')
+                      : (darkMode ? 'text-gray-600' : 'text-gray-400')
+                  }`}>
+                    {included
+                      ? <Check size={16} className="text-emerald-500 shrink-0" />
+                      : <XIcon size={16} className="text-gray-400 shrink-0" />}
+                    {text}
+                  </li>
+                ))}
               </ul>
-              <a href="/signup" className="block w-full text-center bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition">
+              <a href="/signup" className={`block w-full text-center py-3 rounded-xl font-semibold transition-all duration-300 ${
+                darkMode ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}>
                 Get Started Free
               </a>
             </div>
 
             {/* Pro */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-indigo-500 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-500 text-white px-4 py-1 rounded-full text-xs font-bold">
+            <div className={`rounded-2xl p-8 relative hover-card ${
+              pricingInView ? 'animate-fade-in-up delay-200' : 'opacity-0'
+            } ${darkMode ? 'bg-slate-800/50 border-2 border-teal-500' : 'bg-white border-2 border-teal-500'}`}>
+              <div className="absolute -top-3.5 left-1/2 badge-pulse bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg">
                 MOST POPULAR
               </div>
-              <h3 className="text-lg font-bold text-gray-900">Pro (Topper)</h3>
+              <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Pro (Topper)</h3>
               <div className="mt-4 mb-6">
-                <span className="text-4xl font-extrabold text-gray-900">₹49</span>
-                <span className="text-gray-500 ml-1">/month</span>
-                <div className="text-sm text-indigo-600 font-medium mt-1">or ₹399/year (save ₹189)</div>
+                <span className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  &#8377;{annual ? '33' : '49'}
+                </span>
+                <span className={`ml-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>/month</span>
+                {annual && (
+                  <div className="text-sm text-teal-500 font-medium mt-1">
+                    &#8377;399/year (save &#8377;189)
+                  </div>
+                )}
               </div>
-              <ul className="space-y-3 text-sm text-gray-600 mb-8">
-                <li>{'✅'} Everything in Free</li>
-                <li>{'✅'} Unlimited JEE/NEET solves</li>
-                <li>{'✅'} Learn Mode</li>
-                <li>{'✅'} Offline subject packs</li>
-                <li>{'✅'} Mock tests with analysis</li>
-                <li>{'✅'} All 11 languages</li>
-                <li>{'✅'} No ads, priority AI</li>
+              <ul className="space-y-3 text-sm mb-8">
+                {[
+                  'Everything in Free',
+                  'Unlimited JEE/NEET solves',
+                  'Learn Mode',
+                  'Offline subject packs',
+                  'Mock tests with analysis',
+                  'All 11 languages',
+                  'No ads, priority AI',
+                ].map((text) => (
+                  <li key={text} className={`flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <Check size={16} className="text-emerald-500 shrink-0" />
+                    {text}
+                  </li>
+                ))}
               </ul>
-              <a href="/signup?plan=pro" className="block w-full text-center bg-indigo-500 text-white py-3 rounded-xl font-semibold hover:bg-indigo-600 transition">
+              <a href="/signup?plan=pro" className="block w-full text-center bg-gradient-to-r from-teal-500 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300">
                 Start Pro Trial
               </a>
             </div>
 
             {/* Champion */}
-            <div className="bg-white rounded-2xl p-8 border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900">Pro+ (Champion)</h3>
+            <div className={`rounded-2xl p-8 hover-card ${
+              pricingInView ? 'animate-fade-in-up delay-300' : 'opacity-0'
+            } ${darkMode ? 'bg-slate-800/50 border border-slate-700' : 'bg-white border border-gray-200'}`}>
+              <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Pro+ (Champion)</h3>
               <div className="mt-4 mb-6">
-                <span className="text-4xl font-extrabold text-gray-900">₹99</span>
-                <span className="text-gray-500 ml-1">/month</span>
-                <div className="text-sm text-amber-600 font-medium mt-1">or ₹799/year (save ₹389)</div>
+                <span className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  &#8377;{annual ? '67' : '99'}
+                </span>
+                <span className={`ml-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>/month</span>
+                {annual && (
+                  <div className="text-sm text-amber-500 font-medium mt-1">
+                    &#8377;799/year (save &#8377;389)
+                  </div>
+                )}
               </div>
-              <ul className="space-y-3 text-sm text-gray-600 mb-8">
-                <li>{'✅'} Everything in Pro</li>
-                <li>{'✅'} Live doubt chat</li>
-                <li>{'✅'} Personalized study plan</li>
-                <li>{'✅'} Parent weekly reports</li>
-                <li>{'✅'} AR equation scanner</li>
-                <li>{'✅'} Priority support</li>
+              <ul className="space-y-3 text-sm mb-8">
+                {[
+                  'Everything in Pro',
+                  'Live doubt chat',
+                  'Personalized study plan',
+                  'Parent weekly reports',
+                  'AR equation scanner',
+                  'Priority support',
+                ].map((text) => (
+                  <li key={text} className={`flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <Check size={16} className="text-emerald-500 shrink-0" />
+                    {text}
+                  </li>
+                ))}
               </ul>
-              <a href="/signup?plan=champion" className="block w-full text-center bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition">
+              <a href="/signup?plan=champion" className={`block w-full text-center py-3 rounded-xl font-semibold transition-all duration-300 ${
+                darkMode ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}>
                 Start Champion Trial
               </a>
             </div>
@@ -187,62 +636,114 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 px-4 bg-indigo-500">
-        <div className="max-w-3xl mx-auto text-center">
+      {/* ========== CTA ========== */}
+      <section className="py-20 px-4 bg-gradient-cta relative overflow-hidden" ref={ctaRef}>
+        {/* Floating decorative elements */}
+        <div className="absolute top-8 left-[10%] w-20 h-20 border border-white/10 rounded-2xl animate-float-slow rotate-12" />
+        <div className="absolute bottom-12 right-[15%] w-16 h-16 border border-white/10 rounded-full animate-float-reverse" />
+        <div className="absolute top-1/2 left-[5%] w-8 h-8 bg-white/5 rounded-lg animate-float rotate-45" />
+        <div className="absolute top-12 right-[8%] w-12 h-12 bg-white/5 rounded-xl animate-float-slow -rotate-12" />
+
+        <div className={`max-w-3xl mx-auto text-center relative z-10 ${ctaInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Start Solving in 30 Seconds
           </h2>
-          <p className="text-indigo-200 mb-8">
-            Join 10 lakh+ Indian students who study smarter with DoubtMaster AI.
+          <p className="text-teal-200 mb-8 text-lg">
+            Join 10 Lakh+ Indian students who study smarter with DoubtMaster AI.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/signup" className="bg-white text-indigo-600 px-8 py-4 rounded-xl text-lg font-bold hover:bg-gray-100 transition">
+            <a href="/signup" className="group inline-flex items-center justify-center gap-2 bg-white text-teal-600 px-8 py-4 rounded-2xl text-lg font-bold hover:bg-gray-50 transition-all duration-300 hover:-translate-y-1 shadow-xl shadow-black/10">
               Sign Up Free
+              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </a>
-            <a href="#" className="bg-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-bold hover:bg-indigo-700 transition border border-indigo-400">
+            <a href="#" className="inline-flex items-center justify-center gap-2 bg-white/10 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-white/20 transition-all duration-300 hover:-translate-y-1 border border-white/20">
+              <Download size={20} />
               Download App
             </a>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-12 px-4">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-8">
-          <div>
-            <div className="text-white font-bold text-lg mb-4">DoubtMaster AI</div>
-            <p className="text-sm">India's #1 AI homework solver. Built for CBSE, ICSE, JEE, NEET students.</p>
+      {/* ========== FOOTER ========== */}
+      <footer className={`py-16 px-4 ${darkMode ? 'bg-slate-950' : 'bg-gray-900'}`}>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-5 gap-8 mb-12">
+            {/* Brand */}
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">D</span>
+                </div>
+                <span className="font-bold text-xl text-white">
+                  DoubtMaster <span className="text-teal-400">AI</span>
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm mb-6 max-w-xs">
+                India's #1 AI homework solver. Built for CBSE, ICSE, JEE, NEET students. Free forever for NCERT.
+              </p>
+              {/* Social icons */}
+              <div className="flex gap-3">
+                {[Twitter, Instagram, Youtube, Linkedin].map((Icon, i) => (
+                  <a
+                    key={i}
+                    href="#"
+                    className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-teal-500 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+                  >
+                    <Icon size={16} />
+                  </a>
+                ))}
+              </div>
+              {/* App Store badges */}
+              <div className="flex gap-3 mt-6">
+                <div className="px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-center">
+                  <div className="text-[10px] text-gray-400">Download on the</div>
+                  <div className="text-sm font-bold text-white">App Store</div>
+                </div>
+                <div className="px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-center">
+                  <div className="text-[10px] text-gray-400">Get it on</div>
+                  <div className="text-sm font-bold text-white">Google Play</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Links */}
+            <div>
+              <div className="font-semibold text-white mb-4 text-sm">Product</div>
+              <ul className="space-y-2.5 text-sm">
+                {['NCERT Solutions', 'JEE Preparation', 'NEET Preparation', 'Mock Tests', 'Learn Mode'].map((item) => (
+                  <li key={item}><a href="#" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <div className="font-semibold text-white mb-4 text-sm">Company</div>
+              <ul className="space-y-2.5 text-sm">
+                {['About', 'Careers', 'Blog', 'Contact', 'Press'].map((item) => (
+                  <li key={item}><a href="#" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <div className="font-semibold text-white mb-4 text-sm">Legal</div>
+              <ul className="space-y-2.5 text-sm">
+                {['Privacy Policy', 'Terms of Service', 'Refund Policy', 'Cookie Policy'].map((item) => (
+                  <li key={item}><a href="#" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <div>
-            <div className="font-semibold text-white mb-4">Product</div>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white">NCERT Solutions</a></li>
-              <li><a href="#" className="hover:text-white">JEE Preparation</a></li>
-              <li><a href="#" className="hover:text-white">NEET Preparation</a></li>
-              <li><a href="#" className="hover:text-white">Mock Tests</a></li>
-            </ul>
+
+          {/* Bottom bar */}
+          <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-gray-500 text-sm">
+              &copy; 2026 DoubtMaster AI. Made with <Heart size={12} className="inline text-red-500 fill-red-500" /> in India for Indian students.
+            </p>
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <a href="#" className="flex items-center gap-1 hover:text-gray-300 transition-colors">
+                <Mail size={14} /> support@doubtmaster.ai
+              </a>
+            </div>
           </div>
-          <div>
-            <div className="font-semibold text-white mb-4">Company</div>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white">About</a></li>
-              <li><a href="#" className="hover:text-white">Careers</a></li>
-              <li><a href="#" className="hover:text-white">Blog</a></li>
-              <li><a href="#" className="hover:text-white">Contact</a></li>
-            </ul>
-          </div>
-          <div>
-            <div className="font-semibold text-white mb-4">Legal</div>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-white">Refund Policy</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-6xl mx-auto mt-12 pt-8 border-t border-gray-800 text-sm text-center">
-          &copy; 2026 DoubtMaster AI. Made with {'❤️'} in India for Indian students.
         </div>
       </footer>
     </div>

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 import config from '../config/index.js';
+import supabase from '../db/supabase.js';
 
 /**
  * Payment Service — Razorpay (India) + Stripe (International)
@@ -95,38 +96,121 @@ export function verifyRazorpayWebhook(body, signature) {
     .update(JSON.stringify(body))
     .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature || ''),
-    Buffer.from(expectedSignature)
-  );
+  const sigBuffer = Buffer.from(signature || '');
+  const expectedBuffer = Buffer.from(expectedSignature);
+
+  // timingSafeEqual throws if lengths differ — guard against that
+  if (sigBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
 }
 
 /**
- * Handle Razorpay webhook events
+ * Handle Razorpay webhook events — updates DB for subscription lifecycle
  */
 export async function handleRazorpayWebhook(event) {
   const { event: eventType, payload } = event;
 
   switch (eventType) {
-    case 'subscription.activated':
-      logger.info('Subscription activated:', payload.subscription.entity.id);
-      // Update user plan in DB
-      return { action: 'activate', subscriptionId: payload.subscription.entity.id };
+    case 'subscription.activated': {
+      const sub = payload.subscription.entity;
+      logger.info('Subscription activated:', sub.id);
 
-    case 'subscription.charged':
-      logger.info('Subscription charged:', payload.subscription.entity.id);
-      // Record payment
-      return { action: 'charged', subscriptionId: payload.subscription.entity.id };
+      // Determine plan from notes or default to 'pro'
+      const planId = sub.notes?.plan_id || 'pro_monthly';
+      const plan = PLANS[planId];
+      const planType = planId.startsWith('champion') ? 'champion' : 'pro';
+      const billingCycle = plan?.interval === 'yearly' ? 'annual' : 'monthly';
 
-    case 'subscription.cancelled':
-      logger.info('Subscription cancelled:', payload.subscription.entity.id);
+      // Upsert into subscriptions table
+      const { error: subErr } = await supabase.from('subscriptions').upsert({
+        user_id: sub.notes?.user_id,
+        plan: planType,
+        billing_cycle: billingCycle,
+        amount_inr: plan?.price || 49,
+        razorpay_subscription_id: sub.id,
+        status: 'active',
+        starts_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + (billingCycle === 'annual' ? 365 : 30) * 24 * 3600 * 1000).toISOString(),
+      }, { onConflict: 'razorpay_subscription_id' });
+
+      if (subErr) logger.error(`Failed to upsert subscription: ${subErr.message}`);
+
+      // Update user plan
+      if (sub.notes?.user_id) {
+        const { error: userErr } = await supabase
+          .from('users')
+          .update({ plan: planType })
+          .eq('id', sub.notes.user_id);
+        if (userErr) logger.error(`Failed to update user plan: ${userErr.message}`);
+      }
+
+      return { action: 'activate', subscriptionId: sub.id };
+    }
+
+    case 'subscription.charged': {
+      const sub = payload.subscription.entity;
+      logger.info('Subscription charged:', sub.id);
+
+      // Update subscription payment reference
+      const { error: chargeErr } = await supabase
+        .from('subscriptions')
+        .update({
+          razorpay_payment_id: payload.payment?.entity?.id || null,
+          status: 'active',
+        })
+        .eq('razorpay_subscription_id', sub.id);
+
+      if (chargeErr) logger.error(`Failed to update subscription charge: ${chargeErr.message}`);
+
+      return { action: 'charged', subscriptionId: sub.id };
+    }
+
+    case 'subscription.cancelled': {
+      const sub = payload.subscription.entity;
+      logger.info('Subscription cancelled:', sub.id);
+
+      // Update subscription status
+      const { error: cancelErr } = await supabase
+        .from('subscriptions')
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
+        })
+        .eq('razorpay_subscription_id', sub.id);
+
+      if (cancelErr) logger.error(`Failed to update subscription cancellation: ${cancelErr.message}`);
+
       // Downgrade user to free
-      return { action: 'cancel', subscriptionId: payload.subscription.entity.id };
+      if (sub.notes?.user_id) {
+        const { error: userErr } = await supabase
+          .from('users')
+          .update({ plan: 'free' })
+          .eq('id', sub.notes.user_id);
+        if (userErr) logger.error(`Failed to downgrade user plan: ${userErr.message}`);
+      }
 
-    case 'payment.failed':
-      logger.warn('Payment failed:', payload.payment.entity.id);
-      // Notify user
-      return { action: 'payment_failed', paymentId: payload.payment.entity.id };
+      return { action: 'cancel', subscriptionId: sub.id };
+    }
+
+    case 'payment.failed': {
+      const payment = payload.payment.entity;
+      logger.warn('Payment failed:', payment.id);
+
+      // Update subscription to past_due if there's a linked subscription
+      if (payment.subscription_id) {
+        const { error: failErr } = await supabase
+          .from('subscriptions')
+          .update({ status: 'past_due' })
+          .eq('razorpay_subscription_id', payment.subscription_id);
+
+        if (failErr) logger.error(`Failed to update subscription to past_due: ${failErr.message}`);
+      }
+
+      return { action: 'payment_failed', paymentId: payment.id };
+    }
 
     default:
       logger.info(`Unhandled webhook event: ${eventType}`);

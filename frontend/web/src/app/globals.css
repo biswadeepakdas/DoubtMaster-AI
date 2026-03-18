@@ -1,28 +1,51 @@
 @import "tailwindcss";
 
+/* ============================================
+   DOUBTMASTER AI — TEAL & MINT DESIGN SYSTEM
+   Fresh, clean, trustworthy for Indian students
+   ============================================ */
+
 :root {
-  --primary: #6366F1;
-  --primary-dark: #4F46E5;
+  --primary: #0D9488;
+  --primary-dark: #0F766E;
+  --primary-light: #14B8A6;
+  --accent: #34D399;
+  --accent-light: #6EE7B7;
   --secondary: #F59E0B;
   --success: #10B981;
   --error: #EF4444;
-  --background: #FFFFFF;
-  --surface: #F8FAFC;
+  --warning: #F59E0B;
+  --background: #F0FDFA;
+  --surface: #FFFFFF;
   --text: #1E293B;
   --text-secondary: #64748B;
-  --border: #E2E8F0;
+  --border: #D1FAE5;
+  --border-subtle: #E2E8F0;
+  --card-shadow: rgba(13, 148, 136, 0.06);
 }
 
 .dark {
-  --background: #0F172A;
-  --surface: #1E293B;
+  --background: #111827;
+  --surface: #1F2937;
   --text: #F1F5F9;
   --text-secondary: #94A3B8;
-  --border: #334155;
+  --border: #1F3A34;
+  --border-subtle: #374151;
+  --card-shadow: rgba(0, 0, 0, 0.2);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   font-family: 'Inter', 'Noto Sans Devanagari', sans-serif;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+.dark body,
+.dark {
   background-color: var(--background);
   color: var(--text);
 }
@@ -41,16 +64,280 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--border-subtle);
   border-radius: 3px;
 }
 
-/* Pulse animation for camera button */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  50% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
-}
+/* ============================================
+   ANIMATIONS & KEYFRAMES
+   ============================================ */
 
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(13, 148, 136, 0); }
+}
 .pulse-glow {
   animation: pulse-glow 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.05); }
+}
+.badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+@keyframes float-reverse {
+  0%, 100% { transform: translateY(-10px); }
+  50% { transform: translateY(10px); }
+}
+.animate-float-reverse {
+  animation: float-reverse 7s ease-in-out infinite;
+}
+
+/* Gradient text — teal to mint */
+.gradient-text {
+  background: linear-gradient(135deg, #0D9488 0%, #14B8A6 50%, #34D399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-amber {
+  background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Entrance animations */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.7s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-left {
+  animation: slide-in-left 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Stagger delays */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-600 { animation-delay: 0.6s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-800 { animation-delay: 0.8s; }
+
+/* Glassmorphism — clean, not heavy */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(209, 250, 229, 0.6);
+}
+
+.dark .glass {
+  background: rgba(31, 41, 55, 0.8);
+  border: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(209, 250, 229, 0.5);
+}
+
+.dark .glass-card {
+  background: rgba(31, 41, 55, 0.7);
+  border: 1px solid rgba(55, 65, 81, 0.6);
+}
+
+/* Gradient backgrounds — teal-based */
+.bg-gradient-hero {
+  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(13, 148, 136, 0.08) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 40% at 80% 50%, rgba(52, 211, 153, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse 60% 40% at 20% 80%, rgba(245, 158, 11, 0.04) 0%, transparent 50%);
+}
+
+.dark .bg-gradient-hero {
+  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(13, 148, 136, 0.15) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 40% at 80% 50%, rgba(52, 211, 153, 0.08) 0%, transparent 50%),
+              radial-gradient(ellipse 60% 40% at 20% 80%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+}
+
+.bg-gradient-cta {
+  background: linear-gradient(135deg, #0F766E 0%, #0D9488 50%, #14B8A6 100%);
+}
+
+/* Grid pattern */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(13, 148, 136, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 148, 136, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.dark .bg-grid {
+  background-image:
+    linear-gradient(rgba(13, 148, 136, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 148, 136, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Animated gradient orbs */
+@keyframes orb-move {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -20px) scale(1.1); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(15px, 10px) scale(1.05); }
+}
+.animate-orb {
+  animation: orb-move 20s ease-in-out infinite;
+}
+.animate-orb-delayed {
+  animation: orb-move 25s ease-in-out infinite;
+  animation-delay: -10s;
+}
+
+/* Hover card effects — teal shadows */
+.hover-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(13, 148, 136, 0.12);
+}
+.dark .hover-card:hover {
+  box-shadow: 0 20px 40px -12px rgba(13, 148, 136, 0.2);
+}
+
+/* Timeline connector — teal */
+.timeline-connector {
+  position: relative;
+}
+.timeline-connector::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -50%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #0D9488 0%, #34D399 100%);
+  transform: translateY(-50%);
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-count {
+  animation: count-up 0.6s ease-out forwards;
+}
+
+.pricing-toggle {
+  transition: all 0.3s ease;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(13, 148, 136, 0.06) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  from { width: 0%; }
+}
+.animate-progress {
+  animation: progress-fill 1.5s ease-out forwards;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 30s linear infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+.animate-flicker {
+  animation: flicker 1.5s ease-in-out infinite;
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out forwards;
+}
+
+.heatmap-cell {
+  transition: all 0.2s ease;
+}
+.heatmap-cell:hover {
+  transform: scale(1.3);
 }

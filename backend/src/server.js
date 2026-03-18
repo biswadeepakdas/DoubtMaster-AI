@@ -39,7 +39,8 @@ const globalLimiter = rateLimit({
 app.use(globalLimiter);
 
 // Webhooks need raw body (before JSON parser)
-app.use('/api/webhooks', webhookRoutes);
+app.use('/api/v1/webhooks', webhookRoutes);
+app.use('/api/webhooks', webhookRoutes); // Backwards compatibility alias
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -56,7 +57,17 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
+// API v1 routes (primary)
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/questions', questionRoutes);
+app.use('/api/v1/solutions', solutionRoutes);
+app.use('/api/v1/user', userRoutes);
+app.use('/api/v1/subscriptions', subscriptionRoutes);
+app.use('/api/v1/school', schoolRoutes);
+app.use('/api/v1/search', searchRoutes);
+app.use('/api/v1/animations', animationRoutes);
+
+// Backwards compatibility: /api/* aliases to /api/v1/*
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/solutions', solutionRoutes);
@@ -91,5 +102,17 @@ const gracefulShutdown = (signal) => {
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Trigger graceful shutdown — unhandled rejections indicate unpredictable state
+  gracefulShutdown('unhandledRejection');
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  // Trigger graceful shutdown — the process is in an undefined state
+  gracefulShutdown('uncaughtException');
+});
 
 export default app;

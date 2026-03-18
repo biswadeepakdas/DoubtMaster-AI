@@ -1,13 +1,34 @@
 node_modules/
-.env
-.env.local
-.env.production
 .next/
-dist/
-build/
+.env
+.env.*
+!.env.example
 *.log
 .DS_Store
 coverage/
 .expo/
 android/
 ios/
+dist/
+build/
+
+# Secrets
+*.pem
+*.key
+*.p12
+*.pfx
+serviceAccountKey.json
+credentials.json
+firebase-adminsdk*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+
+# Claude
+.claude/

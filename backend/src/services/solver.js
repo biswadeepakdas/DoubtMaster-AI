@@ -1,32 +1,55 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 import { callLLMJson, callLLM, callVision, MODELS } from './llm.js';
 import { logger } from '../utils/logger.js';
+import config from '../config/index.js';
+import { getRedis } from '../db/redis.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SOLVER_SYSTEM_PROMPT = readFileSync(join(__dirname, '../prompts/solver.txt'), 'utf-8');
+
+let SOLVER_SYSTEM_PROMPT;
+try {
+  SOLVER_SYSTEM_PROMPT = readFileSync(join(__dirname, '../prompts/solver.txt'), 'utf-8');
+} catch (err) {
+  logger.warn(`Failed to read solver prompt file: ${err.message}. Using fallback prompt.`);
+  SOLVER_SYSTEM_PROMPT = `You are an expert academic tutor for Indian students (CBSE, ICSE, State Boards, JEE, NEET).
+Solve the given question step-by-step. Return a JSON object with keys:
+- steps: array of { stepNumber, title, content, explanation, concept, formula }
+- finalAnswer: string
+- confidence: number between 0 and 1
+- conceptTags: array of strings
+- relatedPYQs: array of strings (optional)
+- alternativeMethod: string or null`;
+}
 
 /**
  * AI Question Solver Service
  * Multi-model pipeline: Image → OCR → Classification → LLM Solve → Steps Generation
  */
 
-// Solution cache (Redis in production)
-const solutionCache = new Map();
+// Solution cache TTL in seconds (default 72 hours)
+const CACHE_TTL_SECONDS = (config.app.solutionCacheTTLHours || 72) * 3600;
 
 /**
  * Main solve pipeline
  */
 export async function solveQuestion({ id, userId, image, textQuestion, subject, class: grade, board, language, userPlan }) {
   const questionText = textQuestion || await extractTextFromImage(image);
-  const cacheKey = generateCacheKey(questionText);
+  const sanitizedText = sanitizePromptInput(questionText);
+  const cacheKey = generateCacheKey(sanitizedText);
 
-  // Check cache first
-  const cached = solutionCache.get(cacheKey);
-  if (cached) {
-    logger.info(`Cache hit for question ${id}`);
-    return { ...cached, fromCache: true };
+  // Check Redis cache first
+  try {
+    const redis = getRedis();
+    const cachedStr = await redis.get(`sol:${cacheKey}`);
+    if (cachedStr) {
+      logger.info(`Cache hit for question ${id}`);
+      return { ...JSON.parse(cachedStr), fromCache: true };
+    }
+  } catch (err) {
+    logger.warn(`Redis cache read failed: ${err.message}`);
   }
 
   // Classify question
@@ -36,21 +59,26 @@ export async function solveQuestion({ id, userId, image, textQuestion, subject, 
   // Select model: Sarvam for Indian languages, Gemma for English/fallback
   const solveModel = selectModel(classification, language);
 
-  // Generate solution
-  const solution = await generateSolution(questionText, classification, language, solveModel);
+  // Generate solution (use sanitized text for LLM)
+  const solution = await generateSolution(sanitizedText, classification, language, solveModel);
 
   const result = {
     extractedText: questionText,
     subject: classification.subject,
     topic: classification.topic,
     difficulty: classification.difficulty,
-    confidence: solution.confidence || 0.95,
+    confidence: solution.confidence,
     solution,
     modelUsed: solveModel,
   };
 
-  // Cache the result
-  solutionCache.set(cacheKey, result);
+  // Cache the result in Redis
+  try {
+    const redis = getRedis();
+    await redis.set(`sol:${cacheKey}`, JSON.stringify(result), 'EX', CACHE_TTL_SECONDS);
+  } catch (err) {
+    logger.warn(`Redis cache write failed: ${err.message}`);
+  }
 
   return result;
 }
@@ -184,15 +212,21 @@ async function generateSolution(questionText, classification, language, model) {
   try {
     const parsed = await callLLMJson({
       systemPrompt,
-      userPrompt: questionText,
+      userPrompt: `<student_question>${questionText}</student_question>`,
       model,
       temperature: 0.3,
     });
 
+    // Parse confidence from LLM response if available, fallback to 0.95 for primary model
+    const parsedConfidence = parseFloat(parsed.confidence);
+    const confidence = (!isNaN(parsedConfidence) && parsedConfidence >= 0 && parsedConfidence <= 1)
+      ? parsedConfidence
+      : 0.95;
+
     return {
       steps: parsed.steps || [],
       finalAnswer: parsed.finalAnswer || parsed.final_answer || '',
-      confidence: 0.95,
+      confidence,
       conceptTags: parsed.conceptTags || parsed.key_concepts || [],
       relatedPYQs: parsed.relatedPYQs || [],
       alternativeMethod: parsed.alternativeMethod || parsed.alternate_method || null,
@@ -205,7 +239,7 @@ async function generateSolution(questionText, classification, language, model) {
     try {
       const rawText = await callLLM({
         systemPrompt: systemPrompt.replace('Return a JSON object', 'Provide a clear step-by-step solution in plain text'),
-        userPrompt: questionText,
+        userPrompt: `<student_question>${questionText}</student_question>`,
         model: fallbackModel,
         temperature: 0.5,
       });
@@ -213,7 +247,7 @@ async function generateSolution(questionText, classification, language, model) {
       return {
         steps: [{ stepNumber: 1, title: 'Solution', content: rawText, explanation: '', concept: classification.topic, formula: null }],
         finalAnswer: rawText.split('\n').pop() || rawText.substring(0, 200),
-        confidence: 0.8,
+        confidence: 0.75, // Lower confidence for fallback model responses
         conceptTags: [classification.subject, classification.topic],
         relatedPYQs: [],
         alternativeMethod: null,
@@ -284,10 +318,49 @@ Evaluate the student's understanding.`;
 }
 
 /**
- * Generate cache key from question text
+ * Sanitize user input to protect against prompt injection attacks.
+ * Strips known injection patterns, truncates to reasonable length,
+ * and prepares text for safe inclusion in LLM prompts.
+ */
+function sanitizePromptInput(text) {
+  if (!text) return '';
+
+  let sanitized = text;
+
+  // Strip known prompt injection patterns
+  const injectionPatterns = [
+    /ignore\s+(all\s+)?previous\s+(instructions?|prompts?|context)/gi,
+    /ignore\s+(the\s+)?above/gi,
+    /disregard\s+(all\s+)?previous/gi,
+    /you\s+are\s+now\s+/gi,
+    /new\s+instructions?:/gi,
+    /^system\s*:/gmi,
+    /^assistant\s*:/gmi,
+    /^human\s*:/gmi,
+    /\[system\]/gi,
+    /\[assistant\]/gi,
+    /<\/?system>/gi,
+    /<\/?assistant>/gi,
+    /do\s+not\s+follow\s+(your\s+)?instructions/gi,
+    /override\s+(your\s+)?(system|instructions)/gi,
+  ];
+
+  for (const pattern of injectionPatterns) {
+    sanitized = sanitized.replace(pattern, '');
+  }
+
+  // Truncate to reasonable length (2000 chars)
+  sanitized = sanitized.substring(0, 2000).trim();
+
+  return sanitized;
+}
+
+/**
+ * Generate cache key from question text using SHA-256 hash
  */
 function generateCacheKey(text) {
-  return text.toLowerCase().replace(/\s+/g, ' ').trim().substring(0, 500);
+  const normalizedText = text.toLowerCase().replace(/\s+/g, ' ').trim();
+  return crypto.createHash('sha256').update(normalizedText).digest('hex');
 }
 
 /**
