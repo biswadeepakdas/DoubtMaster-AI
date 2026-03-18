@@ -11,30 +11,37 @@ import { logger } from '../utils/logger.js';
  */
 
 const NVIDIA_BASE_URL = config.ai.nvidia.baseUrl;
-
-// Sarvam client — primary solver for Indian languages
-const sarvamClient = new OpenAI({
-  baseURL: NVIDIA_BASE_URL,
-  apiKey: config.ai.nvidia.apiKey,
-  timeout: 120000,
-});
-
-// Gemma client — vision/OCR and fallback solver (separate API key)
-const gemmaClient = new OpenAI({
-  baseURL: NVIDIA_BASE_URL,
-  apiKey: config.ai.gemma.apiKey,
-  timeout: 120000,
-});
-
 const SARVAM_MODEL = config.ai.nvidia.model;
 const GEMMA_MODEL = config.ai.gemma.model;
+
+// Lazy-initialized clients — avoid crash at import time if keys are missing
+let _sarvamClient = null;
+let _gemmaClient = null;
+
+function getSarvamClient() {
+  if (!_sarvamClient) {
+    const apiKey = config.ai.nvidia.apiKey;
+    if (!apiKey) throw new Error('NVIDIA_API_KEY is not configured. Set it in environment variables.');
+    _sarvamClient = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
+  }
+  return _sarvamClient;
+}
+
+function getGemmaClient() {
+  if (!_gemmaClient) {
+    const apiKey = config.ai.gemma.apiKey;
+    if (!apiKey) throw new Error('GEMMA_API_KEY is not configured. Set it in environment variables.');
+    _gemmaClient = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
+  }
+  return _gemmaClient;
+}
 
 /**
  * Get the right client for a given model
  */
 function getClient(model) {
-  if (model === GEMMA_MODEL) return gemmaClient;
-  return sarvamClient;
+  if (model === GEMMA_MODEL) return getGemmaClient();
+  return getSarvamClient();
 }
 
 /**
@@ -97,7 +104,8 @@ export async function callLLMJson({ systemPrompt, userPrompt, model, temperature
 export async function callVision({ imageBase64, prompt, mimeType = 'image/jpeg', maxTokens = 4096 }) {
   logger.info(`Vision call: Gemma 3 27B, image size=${imageBase64.length} chars`);
 
-  const response = await gemmaClient.chat.completions.create({
+  const client = getGemmaClient();
+  const response = await client.chat.completions.create({
     model: GEMMA_MODEL,
     messages: [
       {
