@@ -95,11 +95,18 @@ function SignupContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Signup failed');
 
-      // Store for OTP verification page
-      sessionStorage.setItem('dm-otp-identifier', identifier);
-      sessionStorage.setItem('dm-otp-method', method);
-      sessionStorage.setItem('dm-otp-name', name.trim());
-      router.push('/verify-otp?action=signup');
+      if (data.token || data.accessToken) {
+        // Email signup — tokens returned directly, go to dashboard
+        localStorage.setItem('dm-token', data.token || data.accessToken);
+        if (data.refreshToken) localStorage.setItem('dm-refresh-token', data.refreshToken);
+        router.push('/dashboard');
+      } else {
+        // Phone signup — needs OTP verification
+        sessionStorage.setItem('dm-otp-identifier', identifier);
+        sessionStorage.setItem('dm-otp-method', method);
+        sessionStorage.setItem('dm-otp-name', name.trim());
+        router.push('/verify-otp?action=signup');
+      }
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
     } finally {
