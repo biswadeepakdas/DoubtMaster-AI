@@ -135,16 +135,28 @@ Output the extracted text, nothing else.`,
 function classifyQuestion(text, hintSubject, hintGrade) {
   let subject = hintSubject;
   if (!subject) {
-    if (/(?:solve|equation|x\s*[+=]|integral|differentiat|trigonometr|algebra|geometr|calculus|matrix|matrices|vector|determinant|eigenvalue|eigenvector|linear\s*equation|rank|inverse)/i.test(text)) {
-      subject = 'math';
-    } else if (/(?:force|velocity|acceleration|energy|momentum|circuit|optics|wave|thermodynamic)/i.test(text)) {
-      subject = 'physics';
-    } else if (/(?:element|compound|reaction|acid|base|organic|molar|periodic|oxidation|bond)/i.test(text)) {
-      subject = 'chemistry';
-    } else if (/(?:cell|dna|enzyme|photosynthesis|respiration|evolution|ecology|anatomy|species)/i.test(text)) {
+    // Check biology BEFORE math — biology terms like "cell division" shouldn't match math
+    if (/(?:cell|dna|enzyme|photosynthesis|respiration|evolution|ecology|anatomy|species|mitosis|meiosis|chromosome|nucleus|organ|tissue|blood|heart|lung|kidney|liver|neuron|synapse|hormone|gene|heredity|mutation|protein|amino\s*acid|ribosome|membrane|osmosis|diffusion|ecosystem|food\s*chain|biodiversity|plant|animal|bacteria|virus|fungi|disease|immunity|vaccine|digestion|excretion|reproduction|pollination|germination|xylem|phloem)/i.test(text)) {
       subject = 'biology';
-    } else {
+    } else if (/(?:solve|equation|x\s*[+=]|integral|differentiat|trigonometr|algebra|geometr|calculus|matrix|matrices|vector|determinant|eigenvalue|eigenvector|linear\s*equation|rank|inverse|quadratic|polynomial|factor|arithmetic|number|fraction|percentage|ratio|proportion|profit|loss|interest|area|volume|perimeter)/i.test(text)) {
       subject = 'math';
+    } else if (/(?:force|velocity|acceleration|energy|momentum|circuit|optics|wave|thermodynamic|gravity|friction|pressure|density|magnetic|electric|current|resistance|capacitor|lens|mirror|refraction|reflection|light|sound|motion|projectile|pendulum|ohm|volt|watt)/i.test(text)) {
+      subject = 'physics';
+    } else if (/(?:element|compound|reaction|acid|base|organic|molar|periodic|oxidation|bond|ion|atom|molecule|valency|pH|salt|metal|corrosion|electrolysis|hydrocarbon|polymer|catalyst|isotope|electron|proton|neutron)/i.test(text)) {
+      subject = 'chemistry';
+    } else if (/(?:GDP|economy|demand|supply|inflation|budget|tax|market|trade|revenue|cost|price|profit|monopoly|oligopoly|fiscal|monetary|national\s*income|poverty|unemployment|globalization|WTO|IMF)/i.test(text)) {
+      subject = 'economics';
+    } else if (/(?:account|ledger|journal|balance\s*sheet|trial\s*balance|debit|credit|depreciation|asset|liability|equity|cash\s*flow|voucher|invoice|stock|inventory|goodwill|capital)/i.test(text)) {
+      subject = 'accounts';
+    } else if (/(?:business|management|marketing|entrepreneur|partnership|company|share|debenture|stock\s*exchange|consumer|insurance|warehouse|transport|communication|e-commerce)/i.test(text)) {
+      subject = 'business';
+    } else if (/(?:program|algorithm|loop|function|variable|array|class|object|database|SQL|HTML|CSS|python|java|binary|boolean|stack|queue|network|internet|cyber|computer)/i.test(text)) {
+      subject = 'cs';
+    } else if (/(?:essay|letter|comprehension|grammar|tense|noun|verb|adjective|prose|poetry|drama|summary|character|theme|figure\s*of\s*speech|paragraph|debate|speech|report\s*writing)/i.test(text)) {
+      subject = 'english';
+    } else {
+      // Default to general — let the LLM figure it out
+      subject = 'general';
     }
   }
 
@@ -172,9 +184,13 @@ function classifyQuestion(text, hintSubject, hintGrade) {
       physical: /equilibrium|kinetics|thermochemistry|solution/i,
     },
     biology: {
-      cell_biology: /cell|mitosis|meiosis|organelle/i,
-      genetics: /dna|gene|heredity|mutation|chromosome/i,
-      ecology: /ecosystem|food chain|population|ecology/i,
+      cell_biology: /cell|mitosis|meiosis|organelle|membrane|nucleus|cytoplasm|osmosis|diffusion/i,
+      genetics: /dna|gene|heredity|mutation|chromosome|protein|amino\s*acid|ribosome/i,
+      ecology: /ecosystem|food\s*chain|population|ecology|biodiversity|environment/i,
+      human_body: /heart|lung|kidney|liver|blood|neuron|brain|digestion|excretion|hormone|organ|tissue/i,
+      plant_biology: /photosynthesis|respiration|xylem|phloem|pollination|germination|transpiration|plant/i,
+      reproduction: /reproduction|fertilization|embryo|puberty|menstrual/i,
+      microbiology: /bacteria|virus|fungi|disease|immunity|vaccine|antibiotic/i,
       physiology: /heart|kidney|liver|digestive|nervous/i,
     },
   };
@@ -193,7 +209,7 @@ function classifyQuestion(text, hintSubject, hintGrade) {
   if (/jee\s*advanced|olympiad|prove\s*that|complex/i.test(text)) difficulty = 'hard';
   if (/jee\s*main|neet|board/i.test(text)) difficulty = 'medium';
 
-  return { subject, topic, difficulty, grade: hintGrade };
+  return { subject, topic, difficulty, grade: hintGrade, _questionText: text };
 }
 
 /**
@@ -495,10 +511,12 @@ export function buildSolverPrompt(classification, language) {
   };
 
   // Add diagram instructions for subjects that benefit from visuals
-  // Diagram for science subjects
-  const diagramSubjects = ['biology', 'physics', 'chemistry'];
-  const diagramInstruction = diagramSubjects.includes(classification.subject)
-    ? `\n\nDIAGRAM: If the question asks for or benefits from a diagram, include a "diagram" field in your JSON response with Mermaid.js flowchart code. Use "graph TD" for vertical flows or "graph LR" for horizontal. Label nodes clearly. Style important nodes.`
+  // Diagram for science subjects or when question explicitly asks for one
+  const diagramSubjects = ['biology', 'physics', 'chemistry', 'economics', 'cs'];
+  const questionAsksDiagram = /diagram|draw|illustrate|sketch|flow\s*chart|label/i.test(classification._questionText || '');
+  const shouldIncludeDiagram = diagramSubjects.includes(classification.subject) || questionAsksDiagram;
+  const diagramInstruction = shouldIncludeDiagram
+    ? `\n\nDIAGRAM: You MUST include a "diagram" field in your JSON response with Mermaid.js flowchart code. Use "graph TD" for vertical flows or "graph LR" for horizontal. Label all nodes clearly. Style important nodes with colors. The diagram should visually represent the concept or process being explained.`
     : '';
 
   // Animation for visual subjects (math graphs, physics motion, biology processes, chemistry reactions)
