@@ -109,6 +109,7 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
         conceptTags: result.solution.conceptTags || [],
         alternativeMethod: result.solution.alternativeMethod || null,
         relatedPYQs: result.solution.relatedPYQs || [],
+        diagram: result.solution.diagram || null,
       },
       solveTimeMs,
     });
@@ -184,6 +185,7 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
         conceptTags: result.solution.conceptTags || [],
         alternativeMethod: result.solution.alternativeMethod || null,
         relatedPYQs: result.solution.relatedPYQs || [],
+        diagram: result.solution.diagram || null,
       },
       solveTimeMs,
     });

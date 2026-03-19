@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import api from '../../lib/api';
 import MathRenderer, { MathBlock } from '../../components/MathRenderer';
+import DiagramRenderer from '../../components/DiagramRenderer';
 
 /* -------------------------------------------------- */
 /* Subject badge color mapping                        */
@@ -584,6 +585,19 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+
+            {/* Diagram (biology, physics, chemistry) */}
+            {currentSolution.solution?.diagram && (
+              <div className="mb-6">
+                <h4 className={`font-semibold text-sm mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                  Diagram
+                </h4>
+                <DiagramRenderer
+                  code={currentSolution.solution.diagram}
+                  className={darkMode ? 'bg-slate-800 border-slate-700' : ''}
+                />
+              </div>
+            )}
 
             {/* Learn Mode gate for free users */}
             {currentSolution.solution?.learnModeRequired && !showAllSteps && (
