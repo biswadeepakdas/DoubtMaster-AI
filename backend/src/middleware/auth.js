@@ -17,7 +17,8 @@ export function authenticate(req, res, next) {
 
     const token = authHeader.split(' ')[1];
     try {
-      const decoded = jwt.verify(token, config.jwt.secret);
+      // SECURITY: Explicitly require HS256 to prevent algorithm confusion attacks
+      const decoded = jwt.verify(token, config.jwt.secret, { algorithms: ['HS256'] });
       req.user = decoded;
       next();
     } catch (error) {
@@ -38,7 +39,7 @@ export function authenticate(req, res, next) {
 export async function requirePro(req, res, next) {
   try {
     if (!req.user) {
-      throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
+      return next(new AppError('Authentication required', 401, 'UNAUTHORIZED'));
     }
 
     const userId = req.user.id;
@@ -65,7 +66,7 @@ export async function requirePro(req, res, next) {
         .single();
 
       if (error || !user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
       }
 
       currentPlan = user.plan || 'free';
@@ -80,7 +81,7 @@ export async function requirePro(req, res, next) {
     }
 
     if (currentPlan === 'free') {
-      throw new AppError('Pro subscription required', 403, 'PRO_REQUIRED');
+      return next(new AppError('Pro subscription required', 403, 'PRO_REQUIRED'));
     }
 
     // Update req.user.plan with the current value
@@ -112,6 +113,7 @@ export function requireTeacher(req, res, next) {
  * Generate JWT tokens
  */
 export function generateTokens(user) {
+  // SECURITY: Explicitly set algorithm to prevent algorithm confusion attacks
   const accessToken = jwt.sign(
     {
       id: user.id,
@@ -120,13 +122,14 @@ export function generateTokens(user) {
       role: user.role || 'student',
     },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
+    { expiresIn: config.jwt.expiresIn, algorithm: 'HS256' }
   );
 
+  // SECURITY: Explicitly set algorithm to prevent algorithm confusion attacks
   const refreshToken = jwt.sign(
     { id: user.id, type: 'refresh' },
     config.jwt.secret,
-    { expiresIn: config.jwt.refreshExpiresIn }
+    { expiresIn: config.jwt.refreshExpiresIn, algorithm: 'HS256' }
   );
 
   return { accessToken, token: accessToken, refreshToken };

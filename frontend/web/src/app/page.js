@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Camera, BookOpen, Brain, Globe, Smartphone, Target,
-  BarChart3, School, IndianRupee, Sun, Moon, Menu, X,
-  ChevronRight, Star, Check, X as XIcon, Zap, Shield,
+  BarChart3, School, IndianRupee, Sun, Moon, Menu,
+  ChevronRight, Star, Check, X, Zap, Shield,
   MessageCircle, Users, Download, ArrowRight, Play,
   Sparkles, GraduationCap, Languages, Wifi, WifiOff,
   Heart, Twitter, Instagram, Youtube, Linkedin,
@@ -81,12 +81,24 @@ export default function LandingPage() {
   const [pricingRef, pricingInView] = useInView();
   const [ctaRef, ctaInView] = useInView();
 
-  // Dark mode toggle
+  // Dark mode: persist to localStorage and sync with document
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dm-dark');
+      if (saved === 'true') {
+        setDarkMode(true);
+        document.documentElement.classList.add('dark');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('dm-dark', 'true');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('dm-dark', 'false');
     }
   }, [darkMode]);
 
@@ -168,12 +180,14 @@ export default function LandingPage() {
             <button
               onClick={() => setDarkMode(!darkMode)}
               className={`p-2 rounded-lg ${darkMode ? 'text-yellow-400' : 'text-gray-500'}`}
+              aria-label="Toggle dark mode"
             >
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className={`p-2 rounded-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
               {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
@@ -249,7 +263,7 @@ export default function LandingPage() {
                   <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </a>
                 <a
-                  href="#demo"
+                  href="#how-it-works"
                   className={`inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 hover:-translate-y-1 border ${
                     darkMode
                       ? 'bg-slate-800 text-gray-200 border-slate-700 hover:bg-slate-700'
@@ -281,7 +295,7 @@ export default function LandingPage() {
                     <div className="flex gap-1">
                       <Wifi size={12} />
                       <div className="w-6 h-3 rounded-sm border border-current relative">
-                        <div className="absolute inset-0.5 right-1 bg-green-500 rounded-xs" />
+                        <div className="absolute inset-0.5 right-1 bg-green-500 rounded-sm" />
                       </div>
                     </div>
                   </div>
@@ -502,9 +516,12 @@ export default function LandingPage() {
               </span>
               <button
                 onClick={() => setAnnual(!annual)}
+                role="switch"
+                aria-checked={annual}
+                aria-label="Toggle annual billing"
                 className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${annual ? 'bg-teal-500' : (darkMode ? 'bg-slate-600' : 'bg-gray-300')}`}
               >
-                <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${annual ? 'translate-x-7.5' : 'translate-x-0.5'}`} />
+                <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${annual ? 'translate-x-[1.875rem]' : 'translate-x-0.5'}`} />
               </button>
               <span className={`text-sm font-medium ${annual ? (darkMode ? 'text-white' : 'text-gray-900') : (darkMode ? 'text-gray-500' : 'text-gray-400')}`}>
                 Annual
@@ -543,7 +560,7 @@ export default function LandingPage() {
                   }`}>
                     {included
                       ? <Check size={16} className="text-emerald-500 shrink-0" />
-                      : <XIcon size={16} className="text-gray-400 shrink-0" />}
+                      : <X size={16} className="text-gray-400 shrink-0" />}
                     {text}
                   </li>
                 ))}
@@ -656,7 +673,7 @@ export default function LandingPage() {
               Sign Up Free
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </a>
-            <a href="#" className="inline-flex items-center justify-center gap-2 bg-white/10 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-white/20 transition-all duration-300 hover:-translate-y-1 border border-white/20">
+            <a href="/signup" className="inline-flex items-center justify-center gap-2 bg-white/10 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-white/20 transition-all duration-300 hover:-translate-y-1 border border-white/20">
               <Download size={20} />
               Download App
             </a>
@@ -683,10 +700,18 @@ export default function LandingPage() {
               </p>
               {/* Social icons */}
               <div className="flex gap-3">
-                {[Twitter, Instagram, Youtube, Linkedin].map((Icon, i) => (
+                {[
+                  { Icon: Twitter, label: 'Twitter' },
+                  { Icon: Instagram, label: 'Instagram' },
+                  { Icon: Youtube, label: 'YouTube' },
+                  { Icon: Linkedin, label: 'LinkedIn' },
+                ].map(({ Icon, label }) => (
                   <a
-                    key={i}
+                    key={label}
                     href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Follow us on ${label}`}
                     className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-teal-500 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
                   >
                     <Icon size={16} />
@@ -739,7 +764,7 @@ export default function LandingPage() {
               &copy; 2026 DoubtMaster AI. Made with <Heart size={12} className="inline text-red-500 fill-red-500" /> in India for Indian students.
             </p>
             <div className="flex items-center gap-4 text-sm text-gray-500">
-              <a href="#" className="flex items-center gap-1 hover:text-gray-300 transition-colors">
+              <a href="mailto:support@doubtmaster.ai" className="flex items-center gap-1 hover:text-gray-300 transition-colors">
                 <Mail size={14} /> support@doubtmaster.ai
               </a>
             </div>

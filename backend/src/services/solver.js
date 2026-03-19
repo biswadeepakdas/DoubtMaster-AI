@@ -135,7 +135,7 @@ Output the extracted text, nothing else.`,
 function classifyQuestion(text, hintSubject, hintGrade) {
   let subject = hintSubject;
   if (!subject) {
-    if (/(?:solve|equation|x\s*[+=]|integral|differentiat|trigonometr|algebra|geometr|calculus|matrix|vector)/i.test(text)) {
+    if (/(?:solve|equation|x\s*[+=]|integral|differentiat|trigonometr|algebra|geometr|calculus|matrix|matrices|vector|determinant|eigenvalue|eigenvector|linear\s*equation|rank|inverse)/i.test(text)) {
       subject = 'math';
     } else if (/(?:force|velocity|acceleration|energy|momentum|circuit|optics|wave|thermodynamic)/i.test(text)) {
       subject = 'physics';
@@ -156,7 +156,8 @@ function classifyQuestion(text, hintSubject, hintGrade) {
       algebra: /algebra|polynomial|factor/i,
       geometry: /triangle|circle|area|volume|geometr/i,
       statistics: /mean|median|mode|probability|statistic/i,
-      matrices: /matrix|determinant|matrices/i,
+      matrices: /matrix|determinant|matrices|inverse\s*matrix|adjoint|cofactor/i,
+      linear_algebra: /eigenvalue|eigenvector|vector\s*space|linear\s*transformation|rank|null\s*space|basis|dimension|row\s*echelon|gaussian|cramer/i,
     },
     physics: {
       mechanics: /force|velocity|acceleration|momentum|newton/i,
@@ -235,12 +236,24 @@ async function generateSolution(questionText, classification, language, model) {
       ? parsedConfidence
       : 0.95;
 
+    // Normalize steps: LLMs may return step_number/work or stepNumber/content
+    const rawSteps = parsed.steps || [];
+    // SECURITY: Sanitize LLM output to strip any HTML/script tags before sending to frontend
+    const normalizedSteps = rawSteps.map((step, idx) => ({
+      stepNumber: step.stepNumber || step.step_number || idx + 1,
+      title: sanitizeLLMOutput(step.title || `Step ${idx + 1}`),
+      content: sanitizeLLMOutput(step.content || step.work || ''),
+      explanation: sanitizeLLMOutput(step.explanation || ''),
+      concept: sanitizeLLMOutput(step.concept || step.key_concept || ''),
+      formula: step.formula ? sanitizeLLMOutput(step.formula) : null,
+    }));
+
     return {
-      steps: parsed.steps || [],
-      finalAnswer: parsed.finalAnswer || parsed.final_answer || '',
+      steps: normalizedSteps,
+      finalAnswer: sanitizeLLMOutput(parsed.finalAnswer || parsed.final_answer || ''),
       confidence,
       conceptTags: parsed.conceptTags || parsed.key_concepts || [],
-      relatedPYQs: parsed.relatedPYQs || [],
+      relatedPYQs: parsed.relatedPYQs || parsed.related_pyqs || [],
       alternativeMethod: parsed.alternativeMethod || parsed.alternate_method || null,
     };
   } catch (err) {
@@ -289,17 +302,21 @@ A score of 60+ means the student understands enough to proceed.
 
 Return JSON: { "score": number, "passed": boolean, "feedback": "string", "hint": "string or null" }`;
 
-    const userPrompt = `QUESTION: ${question}
+    // SECURITY: Sanitize student response to prevent prompt injection
+    const sanitizedResponse = sanitizePromptInput(studentResponse);
+    const userPrompt = `QUESTION: ${sanitizePromptInput(question)}
 CORRECT SOLUTION STEPS: ${JSON.stringify(solution.steps?.slice(0, 2))}
-STUDENT'S RESPONSE: ${studentResponse}
+STUDENT'S RESPONSE: ${sanitizedResponse}
 
 Evaluate the student's understanding.`;
 
     const result = await callLLMJson({ systemPrompt, userPrompt, temperature: 0.3 });
+    const score = typeof result.score === 'number' ? result.score : 0;
+    const passed = typeof result.passed === 'boolean' ? result.passed : score >= 60;
     return {
-      score: result.score || 0,
-      passed: result.passed || result.score >= 60,
-      feedback: result.feedback || (result.passed ? 'Good understanding!' : 'Keep trying!'),
+      score,
+      passed,
+      feedback: result.feedback || (passed ? 'Good understanding!' : 'Keep trying!'),
       hint: result.hint || undefined,
     };
   } catch {
@@ -365,6 +382,22 @@ function sanitizePromptInput(text) {
   sanitized = sanitized.substring(0, 2000).trim();
 
   return sanitized;
+}
+
+/**
+ * SECURITY: Sanitize LLM output to strip script tags and event handlers.
+ * Prevents stored XSS if LLM output is rendered as HTML on the frontend.
+ * Preserves LaTeX notation ($...$) and mathematical content.
+ */
+function sanitizeLLMOutput(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed[\s\S]*?>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/javascript\s*:/gi, '');
 }
 
 /**

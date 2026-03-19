@@ -78,11 +78,22 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       if (sErr) logger.error(`Failed to save solution: ${sErr.message}`);
 
       // Increment user solve count
-      await supabase.rpc('increment_solve_count', { user_id_param: req.user.id }).catch(() => {
-        // Fallback if RPC doesn't exist yet
-        supabase.from('users').update({ solve_count: supabase.raw('solve_count + 1') }).eq('id', req.user.id);
+      await supabase.rpc('increment_solve_count', { user_id_param: req.user.id }).catch(async () => {
+        // Fallback if RPC doesn't exist yet: fetch current count and increment
+        try {
+          const { data: userData } = await supabase.from('users').select('solve_count').eq('id', req.user.id).single();
+          const newCount = (userData?.solve_count || 0) + 1;
+          await supabase.from('users').update({ solve_count: newCount }).eq('id', req.user.id);
+        } catch (e) {
+          logger.warn(`Failed to increment solve count: ${e.message}`);
+        }
       });
     }
+
+    // Free plan: show only first 2 steps to encourage Learn Mode
+    const allSteps = result.solution.steps;
+    const isFree = req.user.plan === 'free';
+    const visibleSteps = isFree ? allSteps.slice(0, 2) : allSteps;
 
     res.json({
       questionId: question?.id,
@@ -91,10 +102,14 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       topic: result.topic,
       confidence: result.confidence,
       solution: {
-        steps: result.solution.steps,
-        finalAnswer: req.user.plan !== 'free' ? result.solution.finalAnswer : undefined,
-        learnModeRequired: req.user.plan === 'free',
-        totalSteps: result.solution.steps.length,
+        steps: visibleSteps,
+        finalAnswer: isFree ? undefined : result.solution.finalAnswer,
+        learnModeRequired: isFree,
+        totalSteps: allSteps.length,
+        visibleSteps: visibleSteps.length,
+        conceptTags: result.solution.conceptTags || [],
+        alternativeMethod: isFree ? null : (result.solution.alternativeMethod || null),
+        relatedPYQs: result.solution.relatedPYQs || [],
       },
       solveTimeMs,
     });
@@ -151,7 +166,29 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
       });
     }
 
-    res.json({ questionId: question?.id, ...result, solveTimeMs });
+    // Free plan: show only first 2 steps to encourage Learn Mode
+    const allSteps = result.solution.steps;
+    const isFree = req.user.plan === 'free';
+    const visibleSteps = isFree ? allSteps.slice(0, 2) : allSteps;
+
+    res.json({
+      questionId: question?.id,
+      extractedText: result.extractedText,
+      subject: result.subject,
+      topic: result.topic,
+      confidence: result.confidence,
+      solution: {
+        steps: visibleSteps,
+        finalAnswer: isFree ? undefined : result.solution.finalAnswer,
+        learnModeRequired: isFree,
+        totalSteps: allSteps.length,
+        visibleSteps: visibleSteps.length,
+        conceptTags: result.solution.conceptTags || [],
+        alternativeMethod: isFree ? null : (result.solution.alternativeMethod || null),
+        relatedPYQs: result.solution.relatedPYQs || [],
+      },
+      solveTimeMs,
+    });
   } catch (error) {
     next(error);
   }
@@ -163,8 +200,9 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
 router.get('/history', authenticate, async (req, res, next) => {
   try {
     const { page = 1, limit = 20 } = req.query;
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    // SECURITY: Cap limit to prevent large data exfiltration
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const offset = (pageNum - 1) * limitNum;
 
     const { data: questions, count } = await supabase
@@ -230,6 +268,7 @@ router.post('/:id/learn', authenticate, async (req, res, next) => {
       .single();
 
     if (!question) throw new AppError('Question not found', 404, 'NOT_FOUND');
+    if (question.user_id !== req.user.id) throw new AppError('Access denied', 403, 'FORBIDDEN');
 
     const { response } = req.body;
     if (!response || response.length < 10) {

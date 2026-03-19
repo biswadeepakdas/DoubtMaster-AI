@@ -91,12 +91,30 @@ export async function createRazorpaySubscription(userId, planId) {
  * Verify Razorpay webhook signature
  */
 export function verifyRazorpayWebhook(body, signature) {
+  // SECURITY: Reject if webhook secret is not configured — never verify against empty secret
+  if (!config.razorpay.webhookSecret) {
+    logger.error('Razorpay webhook secret not configured — rejecting webhook');
+    return false;
+  }
+
+  // SECURITY: Reject if signature header is missing
+  if (!signature) {
+    return false;
+  }
+
+  // body may be a raw string/Buffer from the webhook route or a parsed object.
+  // Razorpay computes the HMAC over the raw request body bytes, so we must
+  // use the raw string when available.  When the caller already parsed the
+  // body we fall back to JSON.stringify (less reliable due to key ordering).
+  const bodyStr = typeof body === 'string' || Buffer.isBuffer(body)
+    ? body.toString()
+    : JSON.stringify(body);
   const expectedSignature = crypto
-    .createHmac('sha256', config.razorpay.webhookSecret || '')
-    .update(JSON.stringify(body))
+    .createHmac('sha256', config.razorpay.webhookSecret)
+    .update(bodyStr)
     .digest('hex');
 
-  const sigBuffer = Buffer.from(signature || '');
+  const sigBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expectedSignature);
 
   // timingSafeEqual throws if lengths differ — guard against that

@@ -1,6 +1,6 @@
 /**
  * Solution Screen - Step-by-step solution display with Learn Mode
- * Animated steps, concept tags, "why" explanations
+ * Supports both inline solution data (from Camera) and fetching by questionId.
  */
 import React, { useState, useEffect } from 'react';
 import {
@@ -15,20 +15,51 @@ import {
 import { questionAPI } from '../services/api.js';
 
 export default function SolutionScreen({ route, navigation }) {
-  const { solution, extractedText, subject, confidence, questionId } = route.params || {};
-  const [revealedSteps, setRevealedSteps] = useState(3); // Show first 3 steps
+  const params = route.params || {};
+  const [solution, setSolution] = useState(params.solution || null);
+  const [extractedText, setExtractedText] = useState(params.extractedText || '');
+  const [subject, setSubject] = useState(params.subject || '');
+  const [confidence, setConfidence] = useState(params.confidence || 0);
+  const [questionId] = useState(params.questionId || null);
+
+  const [isLoading, setIsLoading] = useState(!params.solution);
+  const [fetchError, setFetchError] = useState(null);
+
+  const [revealedSteps, setRevealedSteps] = useState(3);
   const [learnModeActive, setLearnModeActive] = useState(false);
   const [studentResponse, setStudentResponse] = useState('');
   const [evaluation, setEvaluation] = useState(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [showFinalAnswer, setShowFinalAnswer] = useState(false);
 
+  // Fetch solution from API if not provided inline
+  useEffect(() => {
+    if (params.solution || !questionId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await questionAPI.getQuestion(questionId);
+        if (cancelled) return;
+        setSolution(data.solution);
+        setExtractedText(data.extractedText || '');
+        setSubject(data.subject || '');
+        setConfidence(data.confidence || 0);
+      } catch {
+        if (!cancelled) setFetchError('Could not load solution. Please try again.');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [questionId, params.solution]);
+
   const steps = solution?.steps || [];
   const totalSteps = steps.length;
   const isLearnModeRequired = solution?.learnModeRequired && !showFinalAnswer;
 
   useEffect(() => {
-    // Auto-activate Learn Mode after showing initial steps
     if (isLearnModeRequired && revealedSteps >= 3) {
       setLearnModeActive(true);
     }
@@ -45,18 +76,72 @@ export default function SolutionScreen({ route, navigation }) {
         setShowFinalAnswer(true);
         setRevealedSteps(totalSteps);
       }
-    } catch (err) {
+    } catch {
       setEvaluation({ score: 0, passed: false, feedback: 'Error evaluating. Try again.' });
     } finally {
       setIsEvaluating(false);
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Loading state
+  // ---------------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#6366F1" />
+        <Text style={styles.loadingText}>Loading solution...</Text>
+      </View>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Error state
+  // ---------------------------------------------------------------------------
+  if (fetchError) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorTitle}>Oops!</Text>
+        <Text style={styles.errorMessage}>{fetchError}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            setFetchError(null);
+            setIsLoading(true);
+            questionAPI.getQuestion(questionId)
+              .then(({ data }) => {
+                setSolution(data.solution);
+                setExtractedText(data.extractedText || '');
+                setSubject(data.subject || '');
+                setConfidence(data.confidence || 0);
+              })
+              .catch(() => setFetchError('Could not load solution. Please try again.'))
+              .finally(() => setIsLoading(false));
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading solution"
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      {/* Back button */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+      >
+        <Text style={styles.backButtonText}>{'< Back'}</Text>
+      </TouchableOpacity>
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Question */}
-        <View style={styles.questionCard}>
+        <View style={styles.questionCard} accessible accessibilityLabel={`Question: ${extractedText || 'Not available'}`}>
           <Text style={styles.questionLabel}>Question</Text>
           <Text style={styles.questionText}>{extractedText || 'Question text'}</Text>
           <View style={styles.metaRow}>
@@ -71,9 +156,26 @@ export default function SolutionScreen({ route, navigation }) {
 
         {/* Steps */}
         <Text style={styles.sectionTitle}>Solution Steps</Text>
+        {steps.length === 0 && (
+          <Text style={styles.noStepsText}>No solution steps available.</Text>
+        )}
         {steps.slice(0, revealedSteps).map((step, index) => (
           <StepCard key={index} step={step} index={index} />
         ))}
+
+        {/* Reveal more steps button */}
+        {revealedSteps < totalSteps && !isLearnModeRequired && (
+          <TouchableOpacity
+            style={styles.revealButton}
+            onPress={() => setRevealedSteps((prev) => Math.min(prev + 3, totalSteps))}
+            accessibilityRole="button"
+            accessibilityLabel="Show more steps"
+          >
+            <Text style={styles.revealButtonText}>
+              Show More ({totalSteps - revealedSteps} remaining)
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Learn Mode Gate */}
         {isLearnModeRequired && learnModeActive && !showFinalAnswer && (
@@ -95,12 +197,15 @@ export default function SolutionScreen({ route, navigation }) {
               placeholderTextColor="#94A3B8"
               value={studentResponse}
               onChangeText={setStudentResponse}
+              accessibilityLabel="Your understanding of the solution"
             />
 
             <TouchableOpacity
               style={[styles.submitButton, studentResponse.length < 10 && styles.submitButtonDisabled]}
               onPress={handleLearnModeSubmit}
               disabled={studentResponse.length < 10 || isEvaluating}
+              accessibilityRole="button"
+              accessibilityLabel="Check understanding"
             >
               {isEvaluating ? (
                 <ActivityIndicator color="#FFFFFF" />
@@ -109,9 +214,12 @@ export default function SolutionScreen({ route, navigation }) {
               )}
             </TouchableOpacity>
 
-            {/* Evaluation Result */}
             {evaluation && (
-              <View style={[styles.evaluationCard, evaluation.passed ? styles.evaluationPassed : styles.evaluationFailed]}>
+              <View
+                style={[styles.evaluationCard, evaluation.passed ? styles.evaluationPassed : styles.evaluationFailed]}
+                accessible
+                accessibilityLabel={`Score ${evaluation.score} percent. ${evaluation.feedback}`}
+              >
                 <Text style={styles.evaluationScore}>Score: {evaluation.score}%</Text>
                 <Text style={styles.evaluationFeedback}>{evaluation.feedback}</Text>
                 {evaluation.hint && (
@@ -124,14 +232,14 @@ export default function SolutionScreen({ route, navigation }) {
 
         {/* Final Answer */}
         {(showFinalAnswer || !isLearnModeRequired) && solution?.finalAnswer && (
-          <View style={styles.finalAnswerCard}>
+          <View style={styles.finalAnswerCard} accessible accessibilityLabel={`Final answer: ${solution.finalAnswer}`}>
             <Text style={styles.finalAnswerLabel}>Final Answer</Text>
             <Text style={styles.finalAnswerText}>{solution.finalAnswer}</Text>
           </View>
         )}
 
         {/* Concept Tags */}
-        {solution?.conceptTags && (
+        {solution?.conceptTags?.length > 0 && (
           <View style={styles.conceptTagsContainer}>
             <Text style={styles.conceptTagsLabel}>Related Concepts</Text>
             <View style={styles.tagRow}>
@@ -146,15 +254,20 @@ export default function SolutionScreen({ route, navigation }) {
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Save solution">
             <Text style={styles.actionIcon}>{'💾'}</Text>
             <Text style={styles.actionLabel}>Save</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} accessibilityRole="button" accessibilityLabel="Share solution">
             <Text style={styles.actionIcon}>{'📤'}</Text>
             <Text style={styles.actionLabel}>Share</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Camera')}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Camera')}
+            accessibilityRole="button"
+            accessibilityLabel="Solve a new question"
+          >
             <Text style={styles.actionIcon}>{'📸'}</Text>
             <Text style={styles.actionLabel}>New</Text>
           </TouchableOpacity>
@@ -170,7 +283,7 @@ function StepCard({ step, index }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <View style={styles.stepCard}>
+    <View style={styles.stepCard} accessible accessibilityLabel={`Step ${step.stepNumber || index + 1}: ${step.title}`}>
       <View style={styles.stepHeader}>
         <View style={styles.stepNumber}>
           <Text style={styles.stepNumberText}>{step.stepNumber || index + 1}</Text>
@@ -186,15 +299,18 @@ function StepCard({ step, index }) {
         </View>
       )}
 
-      {/* Why explanation (expandable) */}
-      <TouchableOpacity
-        style={styles.whyButton}
-        onPress={() => setExpanded(!expanded)}
-      >
-        <Text style={styles.whyButtonText}>
-          {expanded ? '▼ Hide explanation' : '▶ Why this step?'}
-        </Text>
-      </TouchableOpacity>
+      {step.explanation && (
+        <TouchableOpacity
+          style={styles.whyButton}
+          onPress={() => setExpanded(!expanded)}
+          accessibilityRole="button"
+          accessibilityLabel={expanded ? 'Hide explanation' : 'Why this step?'}
+        >
+          <Text style={styles.whyButtonText}>
+            {expanded ? '▼ Hide explanation' : '▶ Why this step?'}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {expanded && (
         <View style={styles.explanationBox}>
@@ -217,7 +333,18 @@ function getSubjectColor(subject) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
+  centered: { justifyContent: 'center', alignItems: 'center' },
   scrollView: { flex: 1 },
+
+  backButton: { paddingTop: 50, paddingHorizontal: 16, paddingBottom: 8 },
+  backButtonText: { fontSize: 16, color: '#6366F1', fontWeight: '600' },
+
+  loadingText: { marginTop: 12, color: '#64748B', fontSize: 14 },
+  errorTitle: { fontSize: 20, fontWeight: '700', color: '#DC2626', marginBottom: 8 },
+  errorMessage: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 16 },
+  retryButton: { backgroundColor: '#6366F1', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  retryButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  noStepsText: { fontSize: 14, color: '#64748B', marginHorizontal: 16, fontStyle: 'italic' },
 
   questionCard: { margin: 16, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 },
   questionLabel: { fontSize: 12, fontWeight: '600', color: '#64748B', textTransform: 'uppercase', letterSpacing: 1 },
@@ -244,6 +371,9 @@ const styles = StyleSheet.create({
   explanationText: { fontSize: 13, color: '#92400E', lineHeight: 20 },
   conceptBadge: { marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   conceptBadgeText: { fontSize: 11, color: '#92400E', fontWeight: '600' },
+
+  revealButton: { marginHorizontal: 16, marginBottom: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#6366F1', alignItems: 'center' },
+  revealButtonText: { color: '#6366F1', fontWeight: '600', fontSize: 14 },
 
   learnModeCard: { margin: 16, padding: 20, backgroundColor: '#EEF2FF', borderRadius: 16, borderWidth: 2, borderColor: '#6366F1' },
   learnModeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },

@@ -1,8 +1,8 @@
 /**
  * Camera Screen - Photo capture for question solving
- * One-tap capture → crop → solve
+ * Handles camera permissions, image capture, gallery pick, and solve upload.
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,12 @@ import {
   ActivityIndicator,
   Image,
   Dimensions,
+  Alert,
+  Linking,
+  Platform,
 } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { questionAPI } from '../services/api.js';
 import { useAppStore } from '../store/authStore.js';
 
@@ -21,32 +26,69 @@ export default function CameraScreen({ navigation }) {
   const [capturedImage, setCapturedImage] = useState(null);
   const [isSolving, setIsSolving] = useState(false);
   const [error, setError] = useState(null);
+  const [flashOn, setFlashOn] = useState(false);
   const { addRecentQuestion, incrementSolved } = useAppStore();
+  const cameraRef = useRef(null);
 
+  // Camera permissions via expo-camera hook
+  const [permission, requestPermission] = useCameraPermissions();
+
+  useEffect(() => {
+    if (permission && !permission.granted && permission.canAskAgain) {
+      requestPermission();
+    }
+  }, [permission, requestPermission]);
+
+  // ---------------------------------------------------------------------------
+  // Capture
+  // ---------------------------------------------------------------------------
   const handleCapture = async () => {
-    // In production: use expo-camera
-    // const photo = await cameraRef.current.takePictureAsync({ quality: 0.7, base64: false });
-    // setCapturedImage(photo.uri);
-
-    // Demo: simulate capture
-    setCapturedImage('captured');
+    if (!cameraRef.current) return;
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        base64: false,
+      });
+      setCapturedImage(photo.uri);
+    } catch {
+      setError('Failed to capture photo. Please try again.');
+    }
   };
 
+  // ---------------------------------------------------------------------------
+  // Gallery pick
+  // ---------------------------------------------------------------------------
+  const handlePickFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setCapturedImage(result.assets[0].uri);
+      }
+    } catch {
+      setError('Could not open gallery.');
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Solve
+  // ---------------------------------------------------------------------------
   const handleSolve = async () => {
+    if (!capturedImage) return;
     setIsSolving(true);
     setError(null);
 
     try {
-      // In production: create FormData with actual image
       const formData = new FormData();
-      // formData.append('image', { uri: capturedImage, type: 'image/jpeg', name: 'question.jpg' });
-
-      // Demo: use text solve
-      const { data } = await questionAPI.solveText({
-        textQuestion: 'Solve: 2x + 5 = 15',
-        subject: 'math',
-        language: 'en',
+      formData.append('image', {
+        uri: capturedImage,
+        type: 'image/jpeg',
+        name: 'question.jpg',
       });
+
+      const { data } = await questionAPI.solveImage(formData);
 
       addRecentQuestion({
         id: data.questionId,
@@ -64,30 +106,83 @@ export default function CameraScreen({ navigation }) {
         confidence: data.confidence,
       });
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to solve. Please try again.');
+      setError(
+        err.response?.data?.error || 'Failed to solve. Please try again.'
+      );
     } finally {
       setIsSolving(false);
     }
   };
 
-  const handlePickFromGallery = async () => {
-    // In production: use expo-image-picker
-    // const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
-    // if (!result.canceled) setCapturedImage(result.assets[0].uri);
-    setCapturedImage('gallery');
-  };
+  // ---------------------------------------------------------------------------
+  // Permission denied state
+  // ---------------------------------------------------------------------------
+  if (permission && !permission.granted) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.permTitle}>Camera Permission Required</Text>
+        <Text style={styles.permSubtext}>
+          DoubtMaster needs camera access to photograph questions.
+        </Text>
+        {permission.canAskAgain ? (
+          <TouchableOpacity
+            style={styles.permButton}
+            onPress={requestPermission}
+            accessibilityRole="button"
+            accessibilityLabel="Grant camera permission"
+          >
+            <Text style={styles.permButtonText}>Grant Permission</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.permButton}
+            onPress={() => Linking.openSettings()}
+            accessibilityRole="button"
+            accessibilityLabel="Open device settings"
+          >
+            <Text style={styles.permButtonText}>Open Settings</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.permButton, styles.permSecondary]}
+          onPress={handlePickFromGallery}
+          accessibilityRole="button"
+          accessibilityLabel="Pick from gallery instead"
+        >
+          <Text style={[styles.permButtonText, { color: '#6366F1' }]}>
+            Pick from Gallery Instead
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
+  // ---------------------------------------------------------------------------
+  // Loading permission state
+  // ---------------------------------------------------------------------------
+  if (!permission) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#6366F1" />
+      </View>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Preview + solve UI
+  // ---------------------------------------------------------------------------
   if (capturedImage) {
     return (
       <View style={styles.container}>
         <View style={styles.previewContainer}>
-          {/* In production: show actual image */}
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.imagePlaceholderText}>Question Image Preview</Text>
-          </View>
-
+          <Image
+            source={{ uri: capturedImage }}
+            style={styles.previewImage}
+            resizeMode="contain"
+            accessibilityLabel="Captured question image"
+          />
           {error && (
-            <View style={styles.errorBanner}>
+            <View style={styles.errorBanner} accessible accessibilityRole="alert">
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
@@ -96,7 +191,12 @@ export default function CameraScreen({ navigation }) {
         <View style={styles.actionBar}>
           <TouchableOpacity
             style={styles.retakeButton}
-            onPress={() => { setCapturedImage(null); setError(null); }}
+            onPress={() => {
+              setCapturedImage(null);
+              setError(null);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Retake photo"
           >
             <Text style={styles.retakeText}>Retake</Text>
           </TouchableOpacity>
@@ -105,6 +205,8 @@ export default function CameraScreen({ navigation }) {
             style={[styles.solveButton, isSolving && styles.solvingButton]}
             onPress={handleSolve}
             disabled={isSolving}
+            accessibilityRole="button"
+            accessibilityLabel={isSolving ? 'Solving question' : 'Solve now'}
           >
             {isSolving ? (
               <>
@@ -120,39 +222,58 @@ export default function CameraScreen({ navigation }) {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Camera viewfinder
+  // ---------------------------------------------------------------------------
   return (
     <View style={styles.container}>
-      {/* Camera Viewfinder */}
-      <View style={styles.viewfinder}>
-        <Text style={styles.viewfinderText}>Camera Viewfinder</Text>
-        <Text style={styles.viewfinderHint}>Point at your question</Text>
-
+      <CameraView
+        ref={cameraRef}
+        style={styles.camera}
+        facing="back"
+        flash={flashOn ? 'on' : 'off'}
+      >
         {/* Crop overlay */}
-        <View style={styles.cropOverlay}>
-          <View style={styles.cropCorner} />
-          <View style={[styles.cropCorner, styles.cropTopRight]} />
-          <View style={[styles.cropCorner, styles.cropBottomLeft]} />
-          <View style={[styles.cropCorner, styles.cropBottomRight]} />
+        <View style={styles.overlayContainer}>
+          <View style={styles.cropOverlay}>
+            <View style={styles.cropCorner} />
+            <View style={[styles.cropCorner, styles.cropTopRight]} />
+            <View style={[styles.cropCorner, styles.cropBottomLeft]} />
+            <View style={[styles.cropCorner, styles.cropBottomRight]} />
+          </View>
+          <Text style={styles.viewfinderHint}>Point at your question</Text>
         </View>
-      </View>
+      </CameraView>
 
       {/* Bottom Controls */}
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.galleryButton} onPress={handlePickFromGallery}>
+        <TouchableOpacity
+          style={styles.galleryButton}
+          onPress={handlePickFromGallery}
+          accessibilityRole="button"
+          accessibilityLabel="Pick image from gallery"
+        >
           <Text style={styles.controlIcon}>{'🖼️'}</Text>
           <Text style={styles.controlLabel}>Gallery</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
+        <TouchableOpacity
+          style={styles.captureButton}
+          onPress={handleCapture}
+          accessibilityRole="button"
+          accessibilityLabel="Capture photo"
+        >
           <View style={styles.captureButtonInner} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.flashButton}
-          onPress={() => {}}
+          onPress={() => setFlashOn((prev) => !prev)}
+          accessibilityRole="button"
+          accessibilityLabel={flashOn ? 'Turn flash off' : 'Turn flash on'}
         >
-          <Text style={styles.controlIcon}>{'⚡'}</Text>
-          <Text style={styles.controlLabel}>Flash</Text>
+          <Text style={styles.controlIcon}>{flashOn ? '⚡' : '🔦'}</Text>
+          <Text style={styles.controlLabel}>{flashOn ? 'On' : 'Off'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -161,12 +282,13 @@ export default function CameraScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
+  centered: { justifyContent: 'center', alignItems: 'center', padding: 24 },
 
-  viewfinder: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a2e' },
-  viewfinderText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
-  viewfinderHint: { color: '#94A3B8', fontSize: 14, marginTop: 8 },
+  camera: { flex: 1 },
+  overlayContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  viewfinderHint: { color: '#FFFFFF', fontSize: 14, marginTop: 16, textShadowColor: '#000', textShadowRadius: 4 },
 
-  cropOverlay: { position: 'absolute', width: width - 40, height: 200, borderWidth: 2, borderColor: '#6366F1', borderRadius: 12 },
+  cropOverlay: { width: width - 40, height: 200, borderWidth: 2, borderColor: '#6366F1', borderRadius: 12 },
   cropCorner: { position: 'absolute', top: -2, left: -2, width: 20, height: 20, borderTopWidth: 4, borderLeftWidth: 4, borderColor: '#6366F1' },
   cropTopRight: { left: undefined, right: -2, borderLeftWidth: 0, borderRightWidth: 4 },
   cropBottomLeft: { top: undefined, bottom: -2, borderTopWidth: 0, borderBottomWidth: 4 },
@@ -181,8 +303,7 @@ const styles = StyleSheet.create({
   controlLabel: { color: '#FFFFFF', fontSize: 12, marginTop: 4 },
 
   previewContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  imagePlaceholder: { width: width - 40, height: 300, backgroundColor: '#1E293B', borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  imagePlaceholderText: { color: '#94A3B8', fontSize: 16 },
+  previewImage: { width: width - 40, height: 300, borderRadius: 16 },
 
   errorBanner: { position: 'absolute', bottom: 20, left: 20, right: 20, backgroundColor: '#EF4444', padding: 12, borderRadius: 8 },
   errorText: { color: '#FFFFFF', textAlign: 'center' },
@@ -193,4 +314,11 @@ const styles = StyleSheet.create({
   solveButton: { flex: 2, flexDirection: 'row', padding: 16, borderRadius: 12, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', gap: 8 },
   solvingButton: { backgroundColor: '#4F46E5' },
   solveText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+
+  // Permission denied UI
+  permTitle: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
+  permSubtext: { fontSize: 14, color: '#94A3B8', textAlign: 'center', marginBottom: 24 },
+  permButton: { backgroundColor: '#6366F1', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, marginBottom: 12, minWidth: 200, alignItems: 'center' },
+  permSecondary: { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#6366F1' },
+  permButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });

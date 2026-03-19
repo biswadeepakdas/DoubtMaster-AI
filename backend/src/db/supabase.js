@@ -5,14 +5,26 @@ import { logger } from '../utils/logger.js';
 /**
  * Supabase client — uses service_role key for full backend access (bypasses RLS)
  */
-const supabase = createClient(config.supabase.url, config.supabase.serviceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+if (!config.supabase.url || !config.supabase.serviceKey) {
+  logger.error('FATAL: SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables are required');
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in production');
+  }
+}
+
+const supabase = createClient(
+  config.supabase.url || 'https://placeholder.supabase.co',
+  config.supabase.serviceKey || 'placeholder-key',
+  { auth: { autoRefreshToken: false, persistSession: false } },
+);
 
 /**
  * Supabase anon client — for operations that should respect RLS
  */
-const supabaseAnon = createClient(config.supabase.url, config.supabase.anonKey);
+const supabaseAnon = createClient(
+  config.supabase.url || 'https://placeholder.supabase.co',
+  config.supabase.anonKey || 'placeholder-anon-key',
+);
 
 /**
  * Test database connection

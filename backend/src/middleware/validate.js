@@ -6,16 +6,20 @@ import { AppError } from './error.js';
  */
 export function validate(schema, source = 'body') {
   return (req, res, next) => {
-    const result = schema.safeParse(req[source]);
-    if (!result.success) {
-      const errors = result.error.issues.map((issue) => ({
-        field: issue.path.join('.'),
-        message: issue.message,
-      }));
-      throw new AppError(`Validation failed: ${errors[0].message}`, 400, 'VALIDATION_ERROR');
+    try {
+      const result = schema.safeParse(req[source]);
+      if (!result.success) {
+        const errors = result.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        }));
+        return next(new AppError(`Validation failed: ${errors[0].message}`, 400, 'VALIDATION_ERROR'));
+      }
+      req.validated = result.data;
+      next();
+    } catch (error) {
+      next(error);
     }
-    req.validated = result.data;
-    next();
   };
 }
 
