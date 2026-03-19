@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Camera, BookOpen, Brain, Sun, Moon, Menu, X, ChevronRight,
@@ -84,6 +84,14 @@ export default function DashboardPage() {
   const [recentQuestions, setRecentQuestions] = useState([]);
   const [subscription, setSubscription] = useState(null);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchRef = useRef(null);
+  const searchTimerRef = useRef(null);
+
   // Toast state
   const [toast, setToast] = useState('');
 
@@ -145,6 +153,48 @@ export default function DashboardPage() {
       fetchDashboardData();
     }
   }, [router, fetchDashboardData]);
+
+  // Search: debounced API call
+  const handleSearchChange = useCallback((value) => {
+    setSearchQuery(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!value.trim()) {
+      setSearchResults([]);
+      setShowSearchDropdown(false);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    setShowSearchDropdown(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const data = await api.get(`/api/v1/questions/history?search=${encodeURIComponent(value.trim())}&limit=5`);
+        setSearchResults(data.questions || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+  }, []);
+
+  // Close search dropdown on outside click or Escape
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setShowSearchDropdown(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
 
   useEffect(() => {
     if (darkMode) {
@@ -317,17 +367,69 @@ export default function DashboardPage() {
           </div>
 
           {/* Center: search (desktop only) */}
-          <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl w-96 ${
-            darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-200'
-          }`}>
-            <Search size={16} className={darkMode ? 'text-gray-500' : 'text-gray-400'} />
-            <input
-              type="text"
-              placeholder="Search questions, topics, chapters..."
-              className={`bg-transparent outline-none text-sm w-full ${darkMode ? 'text-gray-200 placeholder-gray-500' : 'text-gray-700 placeholder-gray-400'}`}
-              onFocus={(e) => { e.target.blur(); showToast('Search is coming soon!'); }}
-              readOnly
-            />
+          <div ref={searchRef} className="hidden md:block relative w-96">
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${
+              darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-200'
+            }`}>
+              <Search size={16} className={darkMode ? 'text-gray-500' : 'text-gray-400'} />
+              <input
+                type="text"
+                placeholder="Search questions, topics, chapters..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={() => { if (searchQuery.trim()) setShowSearchDropdown(true); }}
+                className={`bg-transparent outline-none text-sm w-full ${darkMode ? 'text-gray-200 placeholder-gray-500' : 'text-gray-700 placeholder-gray-400'}`}
+              />
+              {isSearching && (
+                <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin shrink-0" />
+              )}
+            </div>
+            {showSearchDropdown && (
+              <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl shadow-xl border z-50 overflow-hidden ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'
+              }`}>
+                {isSearching ? (
+                  <div className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Searching...</div>
+                ) : searchResults.length === 0 ? (
+                  <div className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No results found</div>
+                ) : (
+                  searchResults.map((q) => {
+                    const sc = subjectColors[q.subject] || subjectColors.Mathematics;
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => {
+                          setShowSearchDropdown(false);
+                          setSearchQuery('');
+                          router.push(`/questions/${q.id}`);
+                        }}
+                        className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${
+                          darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <Search size={14} className={darkMode ? 'text-gray-500 shrink-0' : 'text-gray-400 shrink-0'} />
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                            {q.extractedText || 'Question'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {q.subject && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text}`}>
+                                {q.subject}
+                              </span>
+                            )}
+                            {q.topic && (
+                              <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{q.topic}</span>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight size={14} className={`shrink-0 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right */}
@@ -381,16 +483,16 @@ export default function DashboardPage() {
           }`} onClick={(e) => e.stopPropagation()}>
             <nav className="space-y-1">
               {[
-                { icon: Home, label: 'Dashboard', active: true },
-                { icon: Camera, label: 'Solve', active: false },
-                { icon: BookMarked, label: 'My Questions', active: false },
-                { icon: BarChart3, label: 'Progress', active: false },
-                { icon: FileText, label: 'Mock Tests', active: false },
-                { icon: Settings, label: 'Settings', active: false },
-              ].map(({ icon: Icon, label, active }) => (
+                { icon: Home, label: 'Dashboard', active: true, action: () => {} },
+                { icon: Camera, label: 'Solve', active: false, action: () => { setSidebarOpen(false); document.getElementById('solve-card')?.scrollIntoView({ behavior: 'smooth' }); } },
+                { icon: BookMarked, label: 'My Questions', active: false, action: () => { setSidebarOpen(false); router.push('/questions'); } },
+                { icon: BarChart3, label: 'Progress', active: false, action: () => { setSidebarOpen(false); router.push('/progress'); } },
+                { icon: FileText, label: 'Mock Tests', active: false, action: () => showToast('Mock Tests coming soon!') },
+                { icon: Settings, label: 'Settings', active: false, action: () => { setSidebarOpen(false); router.push('/settings'); } },
+              ].map(({ icon: Icon, label, active, action }) => (
                 <button
                   key={label}
-                  onClick={() => { if (!active) showToast(`${label} is coming soon!`); }}
+                  onClick={action}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                     active
                       ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400'
@@ -433,7 +535,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ========== QUICK SOLVE CARD ========== */}
-        <div className={`rounded-2xl p-6 sm:p-8 mb-8 relative overflow-hidden animate-fade-in-up delay-100 ${
+        <div id="solve-card" className={`rounded-2xl p-6 sm:p-8 mb-8 relative overflow-hidden animate-fade-in-up delay-100 ${
           darkMode ? 'bg-gradient-to-br from-teal-500/20 to-emerald-500/20 border border-teal-500/20' : 'bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-100'
         }`}>
           <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -767,7 +869,7 @@ export default function DashboardPage() {
           }`}>
             <div className="flex items-center justify-between mb-5">
               <h3 className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>Recent Questions</h3>
-              <button onClick={() => showToast('View All is coming soon!')} className="text-teal-500 text-sm font-medium flex items-center gap-1 hover:underline">
+              <button onClick={() => router.push('/questions')} className="text-teal-500 text-sm font-medium flex items-center gap-1 hover:underline">
                 View All <ChevronRight size={14} />
               </button>
             </div>

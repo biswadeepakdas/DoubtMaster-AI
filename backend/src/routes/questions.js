@@ -159,9 +159,10 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       updateStatsAfterSolve(req.user.id, result.subject);
     }
 
-    // Free plan: show only first 2 steps to encourage Learn Mode
+    // Free plan: show only first 3 steps to encourage Learn Mode
     const allSteps = result.solution.steps;
-    const visibleSteps = allSteps;
+    const isFree = req.user.plan === 'free';
+    const visibleSteps = isFree ? allSteps.slice(0, 3) : allSteps;
 
     res.json({
       questionId: question?.id,
@@ -171,8 +172,8 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       confidence: result.confidence,
       solution: {
         steps: visibleSteps,
-        finalAnswer: result.solution.finalAnswer,
-        learnModeRequired: false,
+        finalAnswer: isFree ? undefined : result.solution.finalAnswer,
+        learnModeRequired: isFree,
         totalSteps: allSteps.length,
         visibleSteps: visibleSteps.length,
         conceptTags: result.solution.conceptTags || [],
@@ -240,9 +241,10 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
       updateStatsAfterSolve(req.user.id, result.subject);
     }
 
-    // Free plan: show only first 2 steps to encourage Learn Mode
+    // Free plan: show only first 3 steps to encourage Learn Mode
     const allSteps = result.solution.steps;
-    const visibleSteps = allSteps;
+    const isFree = req.user.plan === 'free';
+    const visibleSteps = isFree ? allSteps.slice(0, 3) : allSteps;
 
     res.json({
       questionId: question?.id,
@@ -252,8 +254,8 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
       confidence: result.confidence,
       solution: {
         steps: visibleSteps,
-        finalAnswer: result.solution.finalAnswer,
-        learnModeRequired: false,
+        finalAnswer: isFree ? undefined : result.solution.finalAnswer,
+        learnModeRequired: isFree,
         totalSteps: allSteps.length,
         visibleSteps: visibleSteps.length,
         conceptTags: result.solution.conceptTags || [],
@@ -274,16 +276,24 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
  */
 router.get('/history', authenticate, async (req, res, next) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     // SECURITY: Cap limit to prevent large data exfiltration
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const offset = (pageNum - 1) * limitNum;
 
-    const { data: questions, count } = await supabase
+    let query = supabase
       .from('questions')
       .select('id, text, subject, topic, difficulty, created_at', { count: 'exact' })
-      .eq('user_id', req.user.id)
+      .eq('user_id', req.user.id);
+
+    // Apply text search filter if provided
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      query = query.ilike('text', searchTerm);
+    }
+
+    const { data: questions, count } = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + limitNum - 1);
 
