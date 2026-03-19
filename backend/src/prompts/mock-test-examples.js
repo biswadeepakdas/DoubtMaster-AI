@@ -201,6 +201,233 @@ export const PYQ_EXAMPLES = {
     },
   ],
 
+  // ===== 2025 BOARD PAPER QUESTIONS (Latest) =====
+
+  'science-CBSE-10': [
+    {
+      id: '2025-sci-1', question: 'Which of the following is the correct electron dot structure of H₂O?',
+      options: ['H:O:H with 2 lone pairs on O', 'H-O-H linear', 'H:O:H with no lone pairs', 'O with 3 bonds to H'],
+      correctAnswer: 'A', topic: 'Chemical Bonding', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-sci-2', question: 'A concave mirror produces a magnified, virtual and erect image. The object is placed:',
+      options: ['At the centre of curvature', 'Between the pole and focus', 'Beyond the centre of curvature', 'At infinity'],
+      correctAnswer: 'B', topic: 'Light - Reflection', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-sci-3', question: 'The SI unit of electric current is:',
+      options: ['Volt', 'Ohm', 'Ampere', 'Watt'],
+      correctAnswer: 'C', topic: 'Electricity', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-sci-4', question: 'Which of the following is a plant hormone that promotes growth?',
+      options: ['Abscisic acid', 'Auxin', 'Ethylene', 'Cytokinin'],
+      correctAnswer: 'B', topic: 'Control and Coordination', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-sci-5', question: 'In the reaction $\\text{Zn} + \\text{CuSO}_4 \\rightarrow \\text{ZnSO}_4 + \\text{Cu}$, which substance is oxidised?',
+      options: ['Cu', 'Zn', '$\\text{CuSO}_4$', '$\\text{ZnSO}_4$'],
+      correctAnswer: 'B', topic: 'Chemical Reactions', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-sci-6', question: 'The human excretory system consists of a pair of kidneys, a pair of ureters, a urinary bladder and a urethra. The functional unit of kidney is:',
+      options: ['Neuron', 'Nephron', 'Glomerulus', 'Bowman\'s capsule'],
+      correctAnswer: 'B', topic: 'Life Processes', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-sci-7', question: 'The power of a lens of focal length 25 cm is:',
+      options: ['+4 D', '-4 D', '+0.25 D', '-0.25 D'],
+      correctAnswer: 'A', topic: 'Light - Refraction', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-sci-8', question: 'Assertion (A): Carbon forms covalent compounds. Reason (R): Carbon has 4 valence electrons and can share electrons to complete its octet.',
+      options: ['Both A and R are true and R is the correct explanation of A', 'Both A and R are true but R is not the correct explanation of A', 'A is true but R is false', 'A is false but R is true'],
+      correctAnswer: 'A', topic: 'Carbon and its Compounds', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+  ],
+
+  'chemistry-CBSE-12-2025': [
+    {
+      id: '2025-chem-1', question: 'Which is a colligative property?',
+      options: ['Surface tension', 'Osmotic pressure', 'Viscosity', 'Density'],
+      correctAnswer: 'B', topic: 'Solutions', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-2', question: 'What is the unit of molality?',
+      options: ['mol/L', 'mol/kg', 'g/L', 'kg/mol'],
+      correctAnswer: 'B', topic: 'Solutions', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-3', question: 'Which law governs gas solubility in liquids?',
+      options: ['Henry\'s law', 'Raoult\'s law', 'Dalton\'s law', 'Boyle\'s law'],
+      correctAnswer: 'A', topic: 'Solutions', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-4', question: 'The Van\'t Hoff factor for $\\text{K}_2\\text{SO}_4$ completely dissociated in water is:',
+      options: ['1', '2', '3', '4'],
+      correctAnswer: 'C', topic: 'Colligative Properties', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-5', question: 'In a galvanic cell, electrons flow from:',
+      options: ['Cathode to anode', 'Anode to cathode', 'Salt bridge', 'Electrolyte to electrode'],
+      correctAnswer: 'B', topic: 'Electrochemistry', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-6', question: 'The standard electrode potential of hydrogen electrode is:',
+      options: ['0.00 V', '1.00 V', '-0.76 V', '0.34 V'],
+      correctAnswer: 'A', topic: 'Electrochemistry', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-7', question: 'Which electrolyte is used in dry cells?',
+      options: ['$\\text{H}_2\\text{SO}_4$', 'KOH', '$\\text{NH}_4\\text{Cl}$', 'NaOH'],
+      correctAnswer: 'C', topic: 'Electrochemistry', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-8', question: 'The unit of rate constant for a first-order reaction is:',
+      options: ['$\\text{s}^{-1}$', '$\\text{mol L}^{-1}\\text{s}^{-1}$', '$\\text{L mol}^{-1}\\text{s}^{-1}$', '$\\text{L}^2\\text{mol}^{-2}\\text{s}^{-1}$'],
+      correctAnswer: 'A', topic: 'Chemical Kinetics', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-9', question: 'Half-life of a first-order reaction is:',
+      options: ['Proportional to initial concentration', 'Independent of initial concentration', 'Inversely proportional to initial concentration', 'Depends on pressure'],
+      correctAnswer: 'B', topic: 'Chemical Kinetics', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-chem-10', question: 'Activation energy is the:',
+      options: ['Minimum energy required for a reaction to occur', 'Maximum energy required', 'Energy of reactants', 'Energy of products'],
+      correctAnswer: 'A', topic: 'Chemical Kinetics', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+  ],
+
+  'physics-CBSE-12-2025': [
+    {
+      id: '2025-phy-1', question: 'In an n-type semiconductor, the majority charge carriers are:',
+      options: ['Holes', 'Electrons', 'Protons', 'Neutrons'],
+      correctAnswer: 'B', topic: 'Semiconductor Electronics', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-phy-2', question: 'The drift velocity of electrons in a conductor increases with:',
+      options: ['Decrease in electric field', 'Increase in electric field', 'Increase in temperature', 'Decrease in length'],
+      correctAnswer: 'B', topic: 'Current Electricity', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-phy-3', question: 'In Young\'s double-slit experiment, if the slit separation is halved and the distance between the screen and slits is doubled, the fringe width becomes:',
+      options: ['Half', 'Double', 'Four times', 'Unchanged'],
+      correctAnswer: 'C', topic: 'Wave Optics', difficulty: 'hard', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-phy-4', question: 'The energy of a photon of wavelength $\\lambda$ is (where $h$ is Planck\'s constant and $c$ is speed of light):',
+      options: ['$h\\lambda/c$', '$hc/\\lambda$', '$h/c\\lambda$', '$c/h\\lambda$'],
+      correctAnswer: 'B', topic: 'Dual Nature of Radiation', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-phy-5', question: 'The ratio of nuclear density to atomic density is approximately:',
+      options: ['$10^3$', '$10^6$', '$10^{13}$', '$10^{15}$'],
+      correctAnswer: 'C', topic: 'Nuclei', difficulty: 'hard', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-phy-6', question: 'A parallel plate capacitor with air as medium has capacitance $C$. If a dielectric of constant $K$ is introduced between the plates, the new capacitance becomes:',
+      options: ['$C/K$', '$KC$', '$C + K$', '$C - K$'],
+      correctAnswer: 'B', topic: 'Electrostatics', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-phy-7', question: 'The magnetic field at the centre of a circular current-carrying coil of radius $r$ with $N$ turns carrying current $I$ is:',
+      options: ['$\\mu_0 NI / 2r$', '$\\mu_0 NI / r$', '$\\mu_0 I / 2Nr$', '$\\mu_0 I / 2\\pi r$'],
+      correctAnswer: 'A', topic: 'Moving Charges and Magnetism', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-phy-8', question: 'Assertion (A): In nuclear fission, the sum of masses of fragments is less than the mass of the parent nucleus. Reason (R): The difference in mass appears as energy according to $E = mc^2$.',
+      options: ['Both A and R are true and R is the correct explanation of A', 'Both A and R are true but R is not the correct explanation of A', 'A is true but R is false', 'A is false but R is true'],
+      correctAnswer: 'A', topic: 'Nuclei', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+  ],
+
+  'biology-CBSE-12-2025': [
+    {
+      id: '2025-bio-1', question: 'The process of formation of sperms in males is called:',
+      options: ['Oogenesis', 'Spermatogenesis', 'Gametogenesis', 'Embryogenesis'],
+      correctAnswer: 'B', topic: 'Human Reproduction', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-bio-2', question: 'Which of the following is an example of ex-situ conservation?',
+      options: ['National Park', 'Wildlife Sanctuary', 'Biosphere Reserve', 'Seed Bank'],
+      correctAnswer: 'D', topic: 'Biodiversity and Conservation', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-bio-3', question: 'The technique used to separate DNA fragments is:',
+      options: ['Centrifugation', 'Gel electrophoresis', 'PCR', 'Chromatography'],
+      correctAnswer: 'B', topic: 'Biotechnology', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-bio-4', question: 'In Mendel\'s dihybrid cross, the phenotypic ratio in F2 generation is:',
+      options: ['1:2:1', '3:1', '9:3:3:1', '1:1:1:1'],
+      correctAnswer: 'C', topic: 'Principles of Inheritance', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-bio-5', question: 'Which of the following diseases is caused by a protozoan?',
+      options: ['Typhoid', 'Malaria', 'Ringworm', 'Common cold'],
+      correctAnswer: 'B', topic: 'Human Health and Disease', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-bio-6', question: 'The primary productivity of an ecosystem depends on:',
+      options: ['Only light', 'Light and temperature', 'Light, temperature, and nutrient availability', 'Only water availability'],
+      correctAnswer: 'C', topic: 'Ecosystem', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-bio-7', question: 'Restriction enzymes are used in genetic engineering to:',
+      options: ['Join DNA fragments', 'Cut DNA at specific sites', 'Amplify DNA', 'Translate mRNA'],
+      correctAnswer: 'B', topic: 'Biotechnology - Principles', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-bio-8', question: 'Assertion (A): Amniocentesis is banned in India. Reason (R): It was being misused for sex determination of the foetus.',
+      options: ['Both A and R are true and R is the correct explanation of A', 'Both A and R are true but R is not the correct explanation of A', 'A is true but R is false', 'A is false but R is true'],
+      correctAnswer: 'A', topic: 'Reproductive Health', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+  ],
+
+  'math-CBSE-10-2025': [
+    {
+      id: '2025-m10-1', question: 'If $\\alpha$ and $\\beta$ are the zeroes of the polynomial $p(x) = 2x^2 - 5x + 3$, then $\\alpha + \\beta$ is:',
+      options: ['$\\frac{5}{2}$', '$\\frac{3}{2}$', '$\\frac{-5}{2}$', '$\\frac{-3}{2}$'],
+      correctAnswer: 'A', topic: 'Polynomials', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-m10-2', question: 'If PA and PB are tangents to a circle with centre O such that $\\angle APB = 90°$ and $AB = 3\\sqrt{2}$ cm, then the diameter of the circle is:',
+      options: ['$3\\sqrt{2}$ cm', '$6\\sqrt{2}$ cm', '3 cm', '6 cm'],
+      correctAnswer: 'D', topic: 'Circles', difficulty: 'hard', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-m10-3', question: 'If the mode of some observations is 10 and sum of mean and median is 25, then the mean and median respectively are:',
+      options: ['12 and 13', '13 and 12', '10 and 15', '15 and 10'],
+      correctAnswer: 'B', topic: 'Statistics', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-m10-4', question: 'The HCF of 12, 21 and 15 is:',
+      options: ['3', '4', '5', '6'],
+      correctAnswer: 'A', topic: 'Real Numbers', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-m10-5', question: 'The distance between the points $A(2, -3)$ and $B(-2, 3)$ is:',
+      options: ['$2\\sqrt{13}$', '$4\\sqrt{13}$', '$4\\sqrt{2}$', '$2\\sqrt{10}$'],
+      correctAnswer: 'A', topic: 'Coordinate Geometry', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-m10-6', question: 'If $\\sin\\theta = \\frac{3}{5}$, then $\\cos\\theta$ is:',
+      options: ['$\\frac{4}{5}$', '$\\frac{3}{4}$', '$\\frac{5}{3}$', '$\\frac{5}{4}$'],
+      correctAnswer: 'A', topic: 'Trigonometry', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-m10-7', question: 'The sum of first 20 terms of an A.P. whose first term is 5 and common difference is 4 is:',
+      options: ['860', '820', '760', '750'],
+      correctAnswer: 'A', topic: 'Arithmetic Progressions', difficulty: 'medium', source: 'CBSE 2025 Board'
+    },
+    {
+      id: '2025-m10-8', question: 'A card is drawn at random from a well-shuffled deck of 52 cards. The probability of getting a face card is:',
+      options: ['$\\frac{1}{13}$', '$\\frac{3}{13}$', '$\\frac{4}{13}$', '$\\frac{1}{4}$'],
+      correctAnswer: 'B', topic: 'Probability', difficulty: 'easy', source: 'CBSE 2025 Board'
+    },
+  ],
+
   'math-JEE-12': [
     {
       id: 'pyq1',
