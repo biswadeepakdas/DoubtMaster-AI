@@ -284,6 +284,7 @@ async function generateSolution(questionText, classification, language, model) {
       relatedPYQs: parsed.relatedPYQs || parsed.related_pyqs || [],
       alternativeMethod: parsed.alternativeMethod || parsed.alternate_method || null,
       diagram: parsed.diagram || null,
+      animation: parsed.animation || null,
     };
   } catch (err) {
     logger.error(`LLM solve failed with ${model}: ${err.message}`);
@@ -494,12 +495,24 @@ export function buildSolverPrompt(classification, language) {
   };
 
   // Add diagram instructions for subjects that benefit from visuals
+  // Diagram for science subjects
   const diagramSubjects = ['biology', 'physics', 'chemistry'];
   const diagramInstruction = diagramSubjects.includes(classification.subject)
-    ? `\n\nDIAGRAM: If the question asks for or benefits from a diagram, include a "diagram" field in your JSON response with Mermaid.js flowchart code. Use "graph TD" for vertical flows or "graph LR" for horizontal. Label nodes clearly. Style important nodes. Example:
-\`\`\`
-"diagram": "graph TD\\n  A[Start] --> B[Step 1]\\n  B --> C[Step 2]"
-\`\`\``
+    ? `\n\nDIAGRAM: If the question asks for or benefits from a diagram, include a "diagram" field in your JSON response with Mermaid.js flowchart code. Use "graph TD" for vertical flows or "graph LR" for horizontal. Label nodes clearly. Style important nodes.`
+    : '';
+
+  // Animation for visual subjects (math graphs, physics motion, biology processes, chemistry reactions)
+  const animatableSubjects = ['math', 'physics', 'biology', 'chemistry'];
+  const animatableTopics = ['equation', 'calculus', 'trigonometry', 'geometry', 'statistics', 'mechanics', 'waves', 'optics', 'cell_biology', 'genetics', 'ecology', 'physiology', 'organic', 'physical', 'matrices', 'linear_algebra'];
+  const shouldAnimate = animatableSubjects.includes(classification.subject) &&
+    (animatableTopics.includes(classification.topic) || classification.difficulty !== 'easy');
+  const animationInstruction = shouldAnimate
+    ? `\n\nANIMATION: Include an "animation" field in your JSON with a p5.js sketch object:
+"animation": { "title": "...", "description": "...", "code": "<p5.js code>" }
+The code must define setup() and draw() functions. Use createCanvas(400, 350).
+Make it educational with labels, colors, smooth motion. Show the concept visually.
+Examples: graph a function, animate projectile motion, show wave propagation, visualize cell division.
+Use \\n for newlines in the code string. Keep under 60 lines. Do NOT use external libraries.`
     : '';
 
   return `${SOLVER_SYSTEM_PROMPT}
@@ -511,7 +524,7 @@ ADDITIONAL CONTEXT FOR THIS QUESTION:
 - Topic: ${classification.topic}
 - Difficulty: ${classification.difficulty}
 - Language: ${langInstructions[language] || langInstructions.en}
-${diagramInstruction}
+${diagramInstruction}${animationInstruction}
 
 CRITICAL: Return your response as a valid JSON object matching the output format above. Do not include any text before or after the JSON.`;
 }
