@@ -136,9 +136,9 @@ function classifyQuestion(text, hintSubject, hintGrade) {
   let subject = hintSubject;
   if (!subject) {
     // Check biology BEFORE math — biology terms like "cell division" shouldn't match math
-    if (/(?:cell|dna|enzyme|photosynthesis|respiration|evolution|ecology|anatomy|species|mitosis|meiosis|chromosome|nucleus|organ|tissue|blood|heart|lung|kidney|liver|neuron|synapse|hormone|gene|heredity|mutation|protein|amino\s*acid|ribosome|membrane|osmosis|diffusion|ecosystem|food\s*chain|biodiversity|plant|animal|bacteria|virus|fungi|disease|immunity|vaccine|digestion|excretion|reproduction|pollination|germination|xylem|phloem)/i.test(text)) {
+    if (/(?:cell|dna|enzyme|photosynthesis|respiration|evolution|ecology|anatomy|species|mitosis|meiosis|chromosome|nucleus|organ|tissue|blood|heart|lung|kidney|liver|neuron|synapse|hormone|gene|heredity|mutation|protein|amino\s*acid|ribosome|membrane|osmosis|diffusion|ecosystem|food\s*chain|biodiversity|plant|animal|bacteria|virus|fungi|disease|immunity|vaccine|digestion|excretion|reproduction|pollination|germination|xylem|phloem|mitochondria|chloroplast|endoplasmic|golgi|lysosome|vacuole|cytoplasm|amoeba|paramecium|euglena|stomata|transpiration|vein|artery|capillary|platelet|haemoglobin|alveoli|bronchi|nephron|urea|insulin|thyroid|pituitary|ovary|testes|zygote|embryo|foetus|placenta|umbilical)/i.test(text)) {
       subject = 'biology';
-    } else if (/(?:solve|equation|x\s*[+=]|integral|differentiat|trigonometr|algebra|geometr|calculus|matrix|matrices|vector|determinant|eigenvalue|eigenvector|linear\s*equation|rank|inverse|quadratic|polynomial|factor|arithmetic|number|fraction|percentage|ratio|proportion|profit|loss|interest|area|volume|perimeter)/i.test(text)) {
+    } else if (/(?:solve|equation|x\s*[+=]|integral|differentiat|trigonometr|algebra|geometr|calculus|matrix|matrices|vector|determinant|eigenvalue|eigenvector|linear\s*equation|rank|inverse|quadratic|polynomial|factor|arithmetic|number|fraction|percentage|ratio|proportion|profit|loss|interest|area|volume|perimeter|\d+\s*[+\-*/×÷]\s*\d+|find\s+the\s+value|calculate|simplify|evaluate|sum\s+of|product\s+of|divide|multiply|subtract|add\s+\d|square\s*root|cube\s*root|log|HCF|LCM|GCD|prime)/i.test(text)) {
       subject = 'math';
     } else if (/(?:force|velocity|acceleration|energy|momentum|circuit|optics|wave|thermodynamic|gravity|friction|pressure|density|magnetic|electric|current|resistance|capacitor|lens|mirror|refraction|reflection|light|sound|motion|projectile|pendulum|ohm|volt|watt)/i.test(text)) {
       subject = 'physics';
@@ -488,7 +488,7 @@ function sanitizeLLMOutput(text) {
  * Generate cache key from question text using SHA-256 hash
  */
 // Cache version — increment to bust all stale cached results
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 
 function generateCacheKey(text) {
   const normalizedText = text.toLowerCase().replace(/\s+/g, ' ').trim();

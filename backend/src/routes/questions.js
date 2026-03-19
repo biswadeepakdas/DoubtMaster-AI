@@ -55,15 +55,16 @@ async function updateStatsAfterSolve(userId, subject) {
       { onConflict: 'user_id,date' }
     );
 
-    // 3. Update users.solve_count atomically
-    await supabase.rpc('increment_solve_count', { user_id_param: userId }).catch(async () => {
-      try {
-        const { data: userData } = await supabase.from('users').select('solve_count').eq('id', userId).single();
-        await supabase.from('users').update({ solve_count: (userData?.solve_count || 0) + 1 }).eq('id', userId);
-      } catch (e) {
-        logger.warn(`Failed to increment solve count: ${e.message}`);
-      }
-    });
+    // 3. Update users.solve_count — simple read-then-write (RPC may not exist)
+    try {
+      const { data: userData } = await supabase.from('users').select('solve_count').eq('id', userId).single();
+      const newCount = (userData?.solve_count || 0) + 1;
+      const { error: updateErr } = await supabase.from('users').update({ solve_count: newCount }).eq('id', userId);
+      if (updateErr) logger.warn(`solve_count update error: ${updateErr.message}`);
+      else logger.info(`solve_count updated to ${newCount} for user ${userId}`);
+    } catch (e) {
+      logger.warn(`Failed to increment solve_count: ${e.message}`);
+    }
 
     // 4. Update streak if this is the first solve today
     if (isFirstSolveToday) {

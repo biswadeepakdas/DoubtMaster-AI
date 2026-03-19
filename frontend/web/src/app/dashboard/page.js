@@ -835,12 +835,11 @@ export default function DashboardPage() {
         )}
 
         {/* ========== STATS GRID ========== */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {[
             { icon: Target, label: 'Questions Solved', value: totalSolved, color: 'text-teal-500', bg: darkMode ? 'bg-teal-500/10' : 'bg-teal-50' },
             { icon: Flame, label: 'Current Streak', value: `${streak} days`, color: 'text-orange-500', bg: darkMode ? 'bg-orange-500/10' : 'bg-orange-50' },
-            { icon: TrendingUp, label: 'Accuracy', value: `${accuracy}%`, color: 'text-emerald-500', bg: darkMode ? 'bg-emerald-500/10' : 'bg-emerald-50' },
-            { icon: Brain, label: 'Weak Topics', value: weakTopics.length, color: 'text-pink-500', bg: darkMode ? 'bg-pink-500/10' : 'bg-pink-50' },
+            { icon: Zap, label: 'Today', value: `${todaySolved} solved`, color: 'text-emerald-500', bg: darkMode ? 'bg-emerald-500/10' : 'bg-emerald-50' },
           ].map((stat, i) => {
             const Icon = stat.icon;
             return (
@@ -953,44 +952,29 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ========== SUBJECT PROGRESS ========== */}
-        <div className={`rounded-2xl p-6 mb-8 animate-fade-in-up delay-500 ${
-          darkMode ? 'bg-slate-800/50 border border-slate-700' : 'bg-white border border-gray-200'
-        }`}>
-          <h3 className={`font-bold text-lg mb-5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Subject Progress</h3>
-
-          {subjectProgress.length === 0 ? (
-            <div className={`text-center py-6 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              <BarChart3 size={28} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Solve questions to see your subject breakdown.</p>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-5">
+        {/* ========== SUBJECTS STUDIED ========== */}
+        {subjectProgress.length > 0 && (
+          <div className={`rounded-2xl p-6 mb-8 animate-fade-in-up delay-500 ${
+            darkMode ? 'bg-slate-800/50 border border-slate-700' : 'bg-white border border-gray-200'
+          }`}>
+            <h3 className={`font-bold text-lg mb-5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Subjects Studied</h3>
+            <div className="flex flex-wrap gap-3">
               {subjectProgress.map((subject) => {
                 const Icon = subject.icon;
+                const count = Object.entries(progress?.bySubject || {}).find(([k]) => k === subject.name)?.[1] || 0;
                 return (
-                  <div key={subject.name} className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${subject.bg}`}>
-                      <Icon size={20} style={{ color: subject.color.includes('teal') ? '#0D9488' : subject.color.includes('blue') ? '#3B82F6' : subject.color.includes('emerald') ? '#10B981' : subject.color.includes('pink') ? '#EC4899' : '#6B7280' }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{subject.name}</span>
-                        <span className={`text-sm font-bold ${darkMode ? 'text-gray-300' : 'text-gray-800'}`}>{subject.progress}%</span>
-                      </div>
-                      <div className={`h-2.5 rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
-                        <div
-                          className={`h-full rounded-full bg-gradient-to-r ${subject.color} animate-progress`}
-                          style={{ width: `${subject.progress}%` }}
-                        />
-                      </div>
-                    </div>
+                  <div key={subject.name} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${
+                    darkMode ? 'bg-slate-700/50' : 'bg-gray-50'
+                  }`}>
+                    <Icon size={16} style={{ color: '#0D9488' }} />
+                    <span className={`text-sm font-medium capitalize ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{subject.name}</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${darkMode ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-700'}`}>{count}</span>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* ========== UPGRADE BANNER (for free users) ========== */}
         {userPlan === 'free' && (
