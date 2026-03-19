@@ -92,8 +92,7 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
 
     // Free plan: show only first 2 steps to encourage Learn Mode
     const allSteps = result.solution.steps;
-    const isFree = req.user.plan === 'free';
-    const visibleSteps = isFree ? allSteps.slice(0, 2) : allSteps;
+    const visibleSteps = allSteps;
 
     res.json({
       questionId: question?.id,
@@ -103,12 +102,12 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       confidence: result.confidence,
       solution: {
         steps: visibleSteps,
-        finalAnswer: isFree ? undefined : result.solution.finalAnswer,
-        learnModeRequired: isFree,
+        finalAnswer: result.solution.finalAnswer,
+        learnModeRequired: false,
         totalSteps: allSteps.length,
         visibleSteps: visibleSteps.length,
         conceptTags: result.solution.conceptTags || [],
-        alternativeMethod: isFree ? null : (result.solution.alternativeMethod || null),
+        alternativeMethod: result.solution.alternativeMethod || null,
         relatedPYQs: result.solution.relatedPYQs || [],
       },
       solveTimeMs,
@@ -168,8 +167,7 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
 
     // Free plan: show only first 2 steps to encourage Learn Mode
     const allSteps = result.solution.steps;
-    const isFree = req.user.plan === 'free';
-    const visibleSteps = isFree ? allSteps.slice(0, 2) : allSteps;
+    const visibleSteps = allSteps;
 
     res.json({
       questionId: question?.id,
@@ -179,12 +177,12 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
       confidence: result.confidence,
       solution: {
         steps: visibleSteps,
-        finalAnswer: isFree ? undefined : result.solution.finalAnswer,
-        learnModeRequired: isFree,
+        finalAnswer: result.solution.finalAnswer,
+        learnModeRequired: false,
         totalSteps: allSteps.length,
         visibleSteps: visibleSteps.length,
         conceptTags: result.solution.conceptTags || [],
-        alternativeMethod: isFree ? null : (result.solution.alternativeMethod || null),
+        alternativeMethod: result.solution.alternativeMethod || null,
         relatedPYQs: result.solution.relatedPYQs || [],
       },
       solveTimeMs,
