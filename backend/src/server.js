@@ -17,6 +17,7 @@ import searchRoutes from './routes/search.js';
 import animationRoutes from './routes/animations.js';
 import webhookRoutes from './routes/webhooks.js';
 import chatRoutes from './routes/chat.js';
+import mockTestRoutes from './routes/mock-tests.js';
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use('/api/v1/school', schoolRoutes);
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/animations', animationRoutes);
 app.use('/api/v1/chat', chatRoutes);
+app.use('/api/v1/mock-tests', mockTestRoutes);
 
 // Backwards compatibility: /api/* aliases to /api/v1/*
 app.use('/api/auth', authRoutes);

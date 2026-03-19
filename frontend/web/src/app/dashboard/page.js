@@ -844,11 +844,12 @@ export default function DashboardPage() {
         )}
 
         {/* ========== STATS GRID ========== */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div className={`grid grid-cols-2 ${totalSolved >= 3 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4 mb-8`}>
           {[
             { icon: Target, label: 'Questions Solved', value: totalSolved, color: 'text-teal-500', bg: darkMode ? 'bg-teal-500/10' : 'bg-teal-50' },
             { icon: Flame, label: 'Current Streak', value: `${streak} days`, color: 'text-orange-500', bg: darkMode ? 'bg-orange-500/10' : 'bg-orange-50' },
             { icon: Zap, label: 'Today', value: `${todaySolved} solved`, color: 'text-emerald-500', bg: darkMode ? 'bg-emerald-500/10' : 'bg-emerald-50' },
+            ...(totalSolved >= 3 ? [{ icon: TrendingUp, label: 'Accuracy', value: `${accuracy}%`, color: 'text-indigo-500', bg: darkMode ? 'bg-indigo-500/10' : 'bg-indigo-50' }] : []),
           ].map((stat, i) => {
             const Icon = stat.icon;
             return (
@@ -868,6 +869,36 @@ export default function DashboardPage() {
             );
           })}
         </div>
+
+        {/* ========== WEAK TOPICS ========== */}
+        {weakTopics.length > 0 && (
+          <div className={`rounded-2xl p-6 mb-8 animate-fade-in-up ${
+            darkMode ? 'bg-slate-800/50 border border-slate-700' : 'bg-white border border-gray-200'
+          }`}>
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle size={18} className="text-amber-500" />
+              <h3 className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>Weak Topics</h3>
+              <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Based on Learn Mode results</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {weakTopics.map((topic) => (
+                <span
+                  key={topic}
+                  className={`text-sm font-medium px-3 py-1.5 rounded-full ${
+                    darkMode
+                      ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}
+                >
+                  {topic}
+                </span>
+              ))}
+            </div>
+            <p className={`text-xs mt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              Topics where you struggled in Learn Mode (2+ failed attempts in the last 30 days). Practice these to improve your accuracy!
+            </p>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
 
