@@ -13,6 +13,7 @@ import {
 import api from '../../lib/api';
 import MathRenderer, { MathBlock } from '../../components/MathRenderer';
 import DiagramRenderer from '../../components/DiagramRenderer';
+import AnimationRenderer from '../../components/AnimationRenderer';
 
 /* -------------------------------------------------- */
 /* Subject badge color mapping                        */
@@ -595,6 +596,18 @@ export default function DashboardPage() {
                 <DiagramRenderer
                   code={currentSolution.solution.diagram}
                   className={darkMode ? 'bg-slate-800 border-slate-700' : ''}
+                />
+              </div>
+            )}
+
+            {/* Animation (math graphs, physics motion, biology processes) */}
+            {currentSolution.solution?.animation && (
+              <div className="mb-6">
+                <AnimationRenderer
+                  code={currentSolution.solution.animation.code || currentSolution.solution.animation}
+                  title={currentSolution.solution.animation.title || 'Interactive Animation'}
+                  description={currentSolution.solution.animation.description}
+                  className={darkMode ? 'border-slate-700' : 'border-gray-200'}
                 />
               </div>
             )}
