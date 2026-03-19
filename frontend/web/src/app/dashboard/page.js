@@ -84,6 +84,9 @@ export default function DashboardPage() {
   const [recentQuestions, setRecentQuestions] = useState([]);
   const [subscription, setSubscription] = useState(null);
 
+  // Toast state
+  const [toast, setToast] = useState('');
+
   // Loading & error
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
@@ -241,15 +244,20 @@ export default function DashboardPage() {
 
   // Build subject progress from bySubject counts
   const subjectProgress = Object.entries(progress?.bySubject || {}).map(([name, count]) => {
-    const total = totalSolved || 1;
+    const pct = totalSolved > 0 ? Math.min(100, Math.round((count / totalSolved) * 100)) : 0;
     return {
       name,
       icon: subjectIcons[name] || BookOpen,
-      progress: Math.min(100, Math.round((count / total) * 100)),
+      progress: pct,
       color: subjectGradients[name] || 'from-gray-500 to-gray-600',
       bg: subjectColors[name]?.bg || 'bg-gray-100 dark:bg-gray-500/10',
     };
   });
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2000);
+  };
 
   /* ---- Loading state ---- */
   if (loading) {
@@ -279,6 +287,13 @@ export default function DashboardPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-[#0F172A]' : 'bg-gray-50'}`}>
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium shadow-lg animate-fade-in-up">
+          {toast}
+        </div>
+      )}
 
       {/* ========== TOP HEADER ========== */}
       <header className={`fixed top-0 w-full z-50 glass h-16 ${darkMode ? 'border-b border-slate-800' : 'border-b border-gray-200'}`}>
@@ -310,6 +325,8 @@ export default function DashboardPage() {
               type="text"
               placeholder="Search questions, topics, chapters..."
               className={`bg-transparent outline-none text-sm w-full ${darkMode ? 'text-gray-200 placeholder-gray-500' : 'text-gray-700 placeholder-gray-400'}`}
+              onFocus={(e) => { e.target.blur(); showToast('Search is coming soon!'); }}
+              readOnly
             />
           </div>
 
@@ -338,9 +355,11 @@ export default function DashboardPage() {
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <button className={`p-2 rounded-lg relative ${darkMode ? 'text-gray-300 hover:bg-slate-800' : 'text-gray-500 hover:bg-gray-100'}`}>
+            <button
+              onClick={() => showToast('Notifications coming soon!')}
+              className={`p-2 rounded-lg ${darkMode ? 'text-gray-300 hover:bg-slate-800' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
               <Bell size={18} />
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>
 
             {/* Avatar */}
@@ -369,10 +388,10 @@ export default function DashboardPage() {
                 { icon: FileText, label: 'Mock Tests', active: false },
                 { icon: Settings, label: 'Settings', active: false },
               ].map(({ icon: Icon, label, active }) => (
-                <a
+                <button
                   key={label}
-                  href="#"
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  onClick={() => { if (!active) showToast(`${label} is coming soon!`); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                     active
                       ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400'
                       : (darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-slate-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
@@ -380,7 +399,7 @@ export default function DashboardPage() {
                 >
                   <Icon size={18} />
                   {label}
-                </a>
+                </button>
               ))}
             </nav>
           </aside>
@@ -699,7 +718,7 @@ export default function DashboardPage() {
             {currentSolution.solution?.alternativeMethod && (
               <div className={`p-3 rounded-xl text-sm ${darkMode ? 'bg-slate-700/50 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
                 <span className="font-medium">Alternative method: </span>
-                {currentSolution.solution.alternativeMethod}
+                <MathRenderer text={currentSolution.solution.alternativeMethod} />
               </div>
             )}
 
@@ -748,9 +767,9 @@ export default function DashboardPage() {
           }`}>
             <div className="flex items-center justify-between mb-5">
               <h3 className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>Recent Questions</h3>
-              <a href="#" className="text-teal-500 text-sm font-medium flex items-center gap-1 hover:underline">
+              <button onClick={() => showToast('View All is coming soon!')} className="text-teal-500 text-sm font-medium flex items-center gap-1 hover:underline">
                 View All <ChevronRight size={14} />
-              </a>
+              </button>
             </div>
 
             {recentQuestions.length === 0 ? (

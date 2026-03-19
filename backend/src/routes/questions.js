@@ -10,6 +10,84 @@ import supabase from '../db/supabase.js';
 
 const router = Router();
 
+/**
+ * Update dashboard stats after a question is solved.
+ * Wrapped in try-catch so failures never block the solve response.
+ */
+async function updateStatsAfterSolve(userId, subject) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    // 1. Check yesterday and today progress BEFORE upserting today's row
+    const [{ data: yesterdayProgress }, { data: todayProgress }] = await Promise.all([
+      supabase
+        .from('user_progress')
+        .select('questions_solved')
+        .eq('user_id', userId)
+        .eq('date', yesterday)
+        .maybeSingle(),
+      supabase
+        .from('user_progress')
+        .select('questions_solved, subjects_data')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .maybeSingle(),
+    ]);
+
+    const isFirstSolveToday = !todayProgress || todayProgress.questions_solved === 0;
+
+    // 2. Upsert user_progress for today — increment questions_solved
+    const newSolvedCount = (todayProgress?.questions_solved || 0) + 1;
+    const subjectsData = todayProgress?.subjects_data || {};
+    if (subject) {
+      subjectsData[subject] = (subjectsData[subject] || 0) + 1;
+    }
+
+    await supabase.from('user_progress').upsert(
+      {
+        user_id: userId,
+        date: today,
+        questions_solved: newSolvedCount,
+        correct_count: (todayProgress?.correct_count || 0) + 1,
+        subjects_data: subjectsData,
+      },
+      { onConflict: 'user_id,date' }
+    );
+
+    // 3. Update users.solve_count atomically
+    await supabase.rpc('increment_solve_count', { user_id_param: userId }).catch(async () => {
+      try {
+        const { data: userData } = await supabase.from('users').select('solve_count').eq('id', userId).single();
+        await supabase.from('users').update({ solve_count: (userData?.solve_count || 0) + 1 }).eq('id', userId);
+      } catch (e) {
+        logger.warn(`Failed to increment solve count: ${e.message}`);
+      }
+    });
+
+    // 4. Update streak if this is the first solve today
+    if (isFirstSolveToday) {
+      try {
+        const { data: userData } = await supabase.from('users').select('streak, best_streak').eq('id', userId).single();
+        let newStreak;
+        if (yesterdayProgress && yesterdayProgress.questions_solved > 0) {
+          // Continued streak
+          newStreak = (userData?.streak || 0) + 1;
+        } else {
+          // New streak (broken or first day)
+          newStreak = 1;
+        }
+        const bestStreak = Math.max(newStreak, userData?.best_streak || 0);
+        await supabase.from('users').update({ streak: newStreak, best_streak: bestStreak }).eq('id', userId);
+      } catch (e) {
+        logger.warn(`Failed to update streak: ${e.message}`);
+      }
+    }
+  } catch (err) {
+    logger.warn(`Stats update failed (non-blocking): ${err.message}`);
+  }
+}
+
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
@@ -77,17 +155,8 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       });
       if (sErr) logger.error(`Failed to save solution: ${sErr.message}`);
 
-      // Increment user solve count
-      await supabase.rpc('increment_solve_count', { user_id_param: req.user.id }).catch(async () => {
-        // Fallback if RPC doesn't exist yet: fetch current count and increment
-        try {
-          const { data: userData } = await supabase.from('users').select('solve_count').eq('id', req.user.id).single();
-          const newCount = (userData?.solve_count || 0) + 1;
-          await supabase.from('users').update({ solve_count: newCount }).eq('id', req.user.id);
-        } catch (e) {
-          logger.warn(`Failed to increment solve count: ${e.message}`);
-        }
-      });
+      // Update all dashboard stats (non-blocking — errors are caught internally)
+      updateStatsAfterSolve(req.user.id, result.subject);
     }
 
     // Free plan: show only first 2 steps to encourage Learn Mode
@@ -156,7 +225,7 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
     }).select().single();
 
     if (question) {
-      await supabase.from('solutions').insert({
+      const { error: sErr } = await supabase.from('solutions').insert({
         question_id: question.id,
         steps: result.solution.steps,
         final_answer: result.solution.finalAnswer || '',
@@ -165,6 +234,10 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
         concept_tags: result.solution.conceptTags || [],
         from_cache: result.fromCache || false,
       });
+      if (sErr) logger.error(`Failed to save solution: ${sErr.message}`);
+
+      // Update all dashboard stats (non-blocking — errors are caught internally)
+      updateStatsAfterSolve(req.user.id, result.subject);
     }
 
     // Free plan: show only first 2 steps to encourage Learn Mode
