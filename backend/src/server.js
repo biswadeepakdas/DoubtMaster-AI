@@ -19,6 +19,10 @@ import webhookRoutes from './routes/webhooks.js';
 
 const app = express();
 
+// Trust proxy — required for Railway/Render/Vercel (behind reverse proxy)
+// Fixes express-rate-limit ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+app.set('trust proxy', 1);
+
 // Security
 app.use(helmet());
 // CORS: use CORS_ORIGIN env var, fallback to permissive in dev

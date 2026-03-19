@@ -57,7 +57,7 @@ export async function solveQuestion({ id, userId, image, textQuestion, subject, 
     const redis = getRedis();
     const cachedStr = await redis.get(`sol:${cacheKey}`);
     if (cachedStr) {
-      logger.info(`Cache hit for question ${id}`);
+      logger.info(`Cache hit for question (key: ${cacheKey.substring(0, 8)}...)`);
       return { ...JSON.parse(cachedStr), fromCache: true };
     }
   } catch (err) {
@@ -487,9 +487,12 @@ function sanitizeLLMOutput(text) {
 /**
  * Generate cache key from question text using SHA-256 hash
  */
+// Cache version — increment to bust all stale cached results
+const CACHE_VERSION = 'v2';
+
 function generateCacheKey(text) {
   const normalizedText = text.toLowerCase().replace(/\s+/g, ' ').trim();
-  return crypto.createHash('sha256').update(normalizedText).digest('hex');
+  return crypto.createHash('sha256').update(`${CACHE_VERSION}:${normalizedText}`).digest('hex');
 }
 
 /**
