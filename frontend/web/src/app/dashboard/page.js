@@ -11,6 +11,7 @@ import {
   Atom, Dna, Calculator, Upload, Type, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import api from '../../lib/api';
+import MathRenderer, { MathBlock } from '../../components/MathRenderer';
 
 /* -------------------------------------------------- */
 /* Subject badge color mapping                        */
@@ -565,19 +566,19 @@ export default function DashboardPage() {
                       {step.title}
                     </h4>
                   </div>
-                  <p className={`text-sm ml-10 whitespace-pre-wrap ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {step.content}
-                  </p>
+                  <div className={`text-sm ml-10 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <MathRenderer text={step.content} />
+                  </div>
                   {step.formula && (
-                    <div className={`ml-10 mt-2 p-2 rounded-lg font-mono text-sm ${
+                    <div className={`ml-10 mt-2 p-3 rounded-lg text-sm overflow-x-auto ${
                       darkMode ? 'bg-indigo-500/10 text-indigo-300' : 'bg-indigo-50 text-indigo-700'
                     }`}>
-                      {step.formula}
+                      <MathBlock text={step.formula} />
                     </div>
                   )}
                   {step.explanation && (
                     <p className={`ml-10 mt-2 text-xs italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {step.explanation}
+                      <MathRenderer text={step.explanation} />
                     </p>
                   )}
                 </div>
@@ -648,9 +649,9 @@ export default function DashboardPage() {
                 <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>
                   Final Answer
                 </p>
-                <p className={`text-lg font-bold ${darkMode ? 'text-emerald-300' : 'text-emerald-800'}`}>
-                  {currentSolution.solution.finalAnswer}
-                </p>
+                <div className={`text-lg font-bold ${darkMode ? 'text-emerald-300' : 'text-emerald-800'}`}>
+                  <MathRenderer text={currentSolution.solution.finalAnswer} />
+                </div>
               </div>
             )}
 
