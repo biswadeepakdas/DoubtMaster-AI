@@ -118,6 +118,55 @@ router.get('/progress', authenticate, async (req, res, next) => {
     }
     const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
 
+    // Detect weak topics: topics where the user failed Learn Mode 2+ times in the last 30 days
+    let weakTopics = [];
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Get all failed learn mode attempts in the last 30 days
+      const { data: failedAttempts } = await supabase
+        .from('learn_mode_attempts')
+        .select('question_id')
+        .eq('user_id', userId)
+        .eq('passed', false)
+        .gte('created_at', thirtyDaysAgo.toISOString());
+
+      if (failedAttempts && failedAttempts.length > 0) {
+        // Get the question topics for these failed attempts
+        const questionIds = [...new Set(failedAttempts.map(a => a.question_id))];
+        const { data: questionTopics } = await supabase
+          .from('questions')
+          .select('id, topic')
+          .in('id', questionIds);
+
+        if (questionTopics) {
+          // Build a map of question_id -> topic
+          const topicMap = {};
+          for (const q of questionTopics) {
+            if (q.topic) topicMap[q.id] = q.topic;
+          }
+
+          // Count failures per topic
+          const failCounts = {};
+          for (const attempt of failedAttempts) {
+            const topic = topicMap[attempt.question_id];
+            if (topic) {
+              failCounts[topic] = (failCounts[topic] || 0) + 1;
+            }
+          }
+
+          // Topics with 2+ failures are weak topics, sorted by fail count descending
+          weakTopics = Object.entries(failCounts)
+            .filter(([, count]) => count >= 2)
+            .sort((a, b) => b[1] - a[1])
+            .map(([topic]) => topic);
+        }
+      }
+    } catch (e) {
+      // Non-fatal: weak topics detection failure should not break the endpoint
+    }
+
     res.json({
       overall: {
         totalSolved,
@@ -126,7 +175,7 @@ router.get('/progress', authenticate, async (req, res, next) => {
         bestStreak: user?.best_streak || 0,
       },
       bySubject: subjectCounts,
-      weakTopics: [],
+      weakTopics,
       dailyGoal: { target: 10, completed: todayProgress?.questions_solved || 0 },
       weeklyActivity,
     });

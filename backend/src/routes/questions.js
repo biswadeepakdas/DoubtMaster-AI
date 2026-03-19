@@ -14,7 +14,7 @@ const router = Router();
  * Update dashboard stats after a question is solved.
  * Wrapped in try-catch so failures never block the solve response.
  */
-async function updateStatsAfterSolve(userId, subject) {
+async function updateStatsAfterSolve(userId, subject, userPlan) {
   try {
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -29,7 +29,7 @@ async function updateStatsAfterSolve(userId, subject) {
         .maybeSingle(),
       supabase
         .from('user_progress')
-        .select('questions_solved, subjects_data')
+        .select('questions_solved, correct_count, subjects_data')
         .eq('user_id', userId)
         .eq('date', today)
         .maybeSingle(),
@@ -44,12 +44,17 @@ async function updateStatsAfterSolve(userId, subject) {
       subjectsData[subject] = (subjectsData[subject] || 0) + 1;
     }
 
+    // For PRO users: increment correct_count immediately (they see full solution).
+    // For FREE users: correct_count waits for Learn Mode pass.
+    const isPro = userPlan === 'pro' || userPlan === 'champion';
+    const newCorrectCount = (todayProgress?.correct_count || 0) + (isPro ? 1 : 0);
+
     await supabase.from('user_progress').upsert(
       {
         user_id: userId,
         date: today,
         questions_solved: newSolvedCount,
-        correct_count: (todayProgress?.correct_count || 0) + 1,
+        correct_count: newCorrectCount,
         subjects_data: subjectsData,
       },
       { onConflict: 'user_id,date' }
@@ -157,7 +162,7 @@ router.post('/solve', authenticate, solveLimiter, upload.single('image'), async 
       if (sErr) logger.error(`Failed to save solution: ${sErr.message}`);
 
       // Update all dashboard stats (non-blocking — errors are caught internally)
-      updateStatsAfterSolve(req.user.id, result.subject);
+      updateStatsAfterSolve(req.user.id, result.subject, req.user.plan);
     }
 
     // Free plan: show only first 3 steps to encourage Learn Mode
@@ -239,7 +244,7 @@ router.post('/text-solve', authenticate, solveLimiter, validate(schemas.solveQue
       if (sErr) logger.error(`Failed to save solution: ${sErr.message}`);
 
       // Update all dashboard stats (non-blocking — errors are caught internally)
-      updateStatsAfterSolve(req.user.id, result.subject);
+      updateStatsAfterSolve(req.user.id, result.subject, req.user.plan);
     }
 
     // Free plan: show only first 3 steps to encourage Learn Mode
@@ -380,6 +385,30 @@ router.post('/:id/learn', authenticate, async (req, res, next) => {
       passed: evaluation.passed,
       feedback: evaluation.feedback,
     });
+
+    // If the student passed Learn Mode, increment correct_count for today
+    // This drives the accuracy metric for free users
+    if (evaluation.passed) {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: todayProgress } = await supabase
+          .from('user_progress')
+          .select('correct_count')
+          .eq('user_id', req.user.id)
+          .eq('date', today)
+          .maybeSingle();
+
+        if (todayProgress) {
+          await supabase
+            .from('user_progress')
+            .update({ correct_count: (todayProgress.correct_count || 0) + 1 })
+            .eq('user_id', req.user.id)
+            .eq('date', today);
+        }
+      } catch (e) {
+        logger.warn(`Failed to update correct_count after learn mode pass: ${e.message}`);
+      }
+    }
 
     res.json({
       score: evaluation.score,
