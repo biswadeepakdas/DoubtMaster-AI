@@ -21,10 +21,16 @@ const app = express();
 
 // Security
 app.use(helmet());
+// CORS: use CORS_ORIGIN env var, fallback to permissive in dev
+const corsOrigin = process.env.CORS_ORIGIN;
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : (config.isDev
-    ? ['http://localhost:3000', 'http://localhost:8081']
-    : ['https://doubtmaster.ai', 'https://app.doubtmaster.ai']),
+  origin: corsOrigin === '*'
+    ? true
+    : corsOrigin
+      ? corsOrigin.split(',').map(s => s.trim())
+      : config.isDev
+        ? ['http://localhost:3000', 'http://localhost:8081']
+        : ['https://doubtmaster.ai', 'https://app.doubtmaster.ai'],
   credentials: true,
 }));
 
