@@ -283,6 +283,7 @@ async function generateSolution(questionText, classification, language, model) {
       conceptTags: parsed.conceptTags || parsed.key_concepts || [],
       relatedPYQs: parsed.relatedPYQs || parsed.related_pyqs || [],
       alternativeMethod: parsed.alternativeMethod || parsed.alternate_method || null,
+      diagram: parsed.diagram || null,
     };
   } catch (err) {
     logger.error(`LLM solve failed with ${model}: ${err.message}`);
@@ -317,6 +318,7 @@ async function generateSolution(questionText, classification, language, model) {
           conceptTags: fallbackParsed.conceptTags || fallbackParsed.key_concepts || [],
           relatedPYQs: fallbackParsed.relatedPYQs || fallbackParsed.related_pyqs || [],
           alternativeMethod: fallbackParsed.alternativeMethod || fallbackParsed.alternate_method || null,
+          diagram: fallbackParsed.diagram || null,
         };
       } catch (fallbackErr) {
         logger.warn(`Fallback ${fallbackModel} also failed: ${fallbackErr.message}`);
@@ -491,6 +493,15 @@ export function buildSolverPrompt(classification, language) {
     od: 'Respond in Odia.',
   };
 
+  // Add diagram instructions for subjects that benefit from visuals
+  const diagramSubjects = ['biology', 'physics', 'chemistry'];
+  const diagramInstruction = diagramSubjects.includes(classification.subject)
+    ? `\n\nDIAGRAM: If the question asks for or benefits from a diagram, include a "diagram" field in your JSON response with Mermaid.js flowchart code. Use "graph TD" for vertical flows or "graph LR" for horizontal. Label nodes clearly. Style important nodes. Example:
+\`\`\`
+"diagram": "graph TD\\n  A[Start] --> B[Step 1]\\n  B --> C[Step 2]"
+\`\`\``
+    : '';
+
   return `${SOLVER_SYSTEM_PROMPT}
 
 ADDITIONAL CONTEXT FOR THIS QUESTION:
@@ -500,6 +511,7 @@ ADDITIONAL CONTEXT FOR THIS QUESTION:
 - Topic: ${classification.topic}
 - Difficulty: ${classification.difficulty}
 - Language: ${langInstructions[language] || langInstructions.en}
+${diagramInstruction}
 
 CRITICAL: Return your response as a valid JSON object matching the output format above. Do not include any text before or after the JSON.`;
 }
