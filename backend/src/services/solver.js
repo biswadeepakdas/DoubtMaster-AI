@@ -527,10 +527,88 @@ export function buildSolverPrompt(classification, language) {
   const animationInstruction = shouldAnimate
     ? `\n\nANIMATION: Include an "animation" field in your JSON with a p5.js sketch object:
 "animation": { "title": "...", "description": "...", "code": "<p5.js code>" }
-The code must define setup() and draw() functions. Use createCanvas(400, 350).
-Make it educational with labels, colors, smooth motion. Show the concept visually.
-Examples: graph a function, animate projectile motion, show wave propagation, visualize cell division.
-Use \\n for newlines in the code string. Keep under 60 lines. Do NOT use external libraries.`
+
+The code MUST define setup() and draw() functions. Use \\n for newlines in the code string. Keep under 80 lines. Do NOT use external libraries besides p5.js.
+
+=== P5.JS DESIGN RULES (FOLLOW STRICTLY) ===
+
+SETUP:
+- createCanvas(400, 350);
+- smooth();  // MUST call for anti-aliasing
+- frameRate(30);
+- textFont('sans-serif');
+
+BACKGROUND & COLORS:
+- Background: background(248, 250, 252);  // clean near-white #F8FAFC, NEVER use background(220) or gray
+- Primary palette:
+  - Teal: fill(13, 148, 136) or stroke(13, 148, 136)     // #0D9488
+  - Emerald: fill(16, 185, 129)                            // #10B981
+  - Indigo: fill(99, 102, 241)                              // #6366F1
+  - Slate text: fill(51, 65, 85)                            // #334155
+- Use alpha for overlays: fill(13, 148, 136, 50) for transparent teal
+
+GRID & AXES:
+- Grid lines: stroke(226, 232, 240); strokeWeight(0.5);   // very faint #E2E8F0
+- Axes: stroke(100, 116, 139); strokeWeight(1.5);         // slate #64748B
+- Add tick marks every grid unit
+- Label axes with textSize(10), fill(100, 116, 139)
+- Helper function drawGrid() that draws faint horizontal and vertical lines
+
+SHAPES & LINES:
+- strokeWeight(2) minimum for all visible lines
+- Use rounded rectangles: rect(x, y, w, h, 8) for labels/pills
+- Prefer ellipse over circle for organic shapes
+- Use beginShape()/endShape() for smooth curves
+
+MOTION & ANIMATION:
+- Use lerp() or sin()-based easing for ALL motion — NEVER linear jumps
+- Show trail/ghost effect: draw previous positions with low alpha before current position
+- Example trail: fill(13, 148, 136, 40); ellipse(prevX, prevY, 12); then fill(13, 148, 136); ellipse(x, y, 14);
+- Use frameCount for time-based animation: let t = frameCount * 0.02;
+
+TEXT & LABELS:
+- Title at top: textSize(13); fill(51, 65, 85); textAlign(CENTER); text(title, 200, 20);
+- Labels: textSize(11); fill(51, 65, 85);
+- Use pill backgrounds for value labels:
+    fill(255, 255, 255, 220); rect(x+10, y-20, 80, 22, 8);
+    fill(51, 65, 85); textSize(11); text(label, x+14, y-5);
+- Always show units in labels (m/s, N, cm, etc.)
+
+SUBJECT-SPECIFIC RULES:
+- GRAPHS (math): Draw coordinate grid, label axes with values, plot function with thick teal line (strokeWeight(2.5)), show moving point on curve as filled circle
+- PHYSICS: Show velocity/force vectors as arrows (use triangle heads), trajectory as dotted trail (use point() in a loop), label forces with magnitudes
+- BIOLOGY: Use soft organic shapes (ellipses with low-alpha fills), pastel colors (fill with alpha 80-120), label all structures
+- CHEMISTRY: Use circles for atoms with element labels inside, connecting lines for bonds, animate reaction progress
+
+EXAMPLE OF GOOD CODE:
+function setup() {
+  createCanvas(400, 350);
+  smooth();
+  frameRate(30);
+  textFont('sans-serif');
+}
+function draw() {
+  background(248, 250, 252);
+  // Title
+  noStroke(); fill(51, 65, 85); textSize(13); textAlign(CENTER); text('Projectile Motion', 200, 22);
+  // Grid
+  stroke(226, 232, 240); strokeWeight(0.5);
+  for (let x = 50; x < 380; x += 30) line(x, 40, x, 310);
+  for (let y = 40; y < 310; y += 30) line(50, y, 380, y);
+  // Axes
+  stroke(100, 116, 139); strokeWeight(1.5); line(50, 310, 380, 310); line(50, 40, 50, 310);
+  // Animated point with trail
+  let t = (frameCount % 120) / 120;
+  let px = lerp(60, 370, t);
+  let py = 300 - 250 * 4 * t * (1 - t);
+  noStroke(); fill(13, 148, 136, 40); ellipse(px - 4, py + 2, 12);
+  fill(13, 148, 136); ellipse(px, py, 14);
+  // Label pill
+  fill(255, 255, 255, 220); rect(px + 10, py - 22, 70, 22, 8);
+  fill(51, 65, 85); noStroke(); textSize(11); textAlign(LEFT); text('h=' + (300 - py).toFixed(0) + 'px', px + 14, py - 7);
+}
+
+DO NOT generate ugly/default code. NEVER use background(220). NEVER use default gray colors. ALWAYS include grid, labels, smooth motion, and the teal/emerald palette.`
     : '';
 
   return `${SOLVER_SYSTEM_PROMPT}
