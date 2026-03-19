@@ -5,42 +5,49 @@ import { logger } from '../utils/logger.js';
 /**
  * LLM Service — Multi-model support via NVIDIA NIM (OpenAI-compatible API)
  *
- * Models:
- *   - sarvamai/sarvam-m  → Indian multilingual solver (Hindi, Tamil, Telugu, etc.)
- *   - google/gemma-3-27b-it → Vision/OCR + English fallback solver
+ * Model Routing:
+ *   - sarvamai/sarvam-m       → Indian languages (Hindi, Odia, Kannada, etc.)
+ *   - google/gemma-3-27b-it   → Vision/OCR (image → text extraction)
+ *   - deepseek-ai/deepseek-v3-2  → Hard math, JEE/NEET, reasoning (87.5% AIME)
+ *   - qwen/qwq-32b            → Math reasoning backup, step-by-step
+ *   - qwen/qwen3.5-122b-a10b  → All-subjects workhorse (122B params)
  */
 
 const NVIDIA_BASE_URL = config.ai.nvidia.baseUrl;
-const SARVAM_MODEL = config.ai.nvidia.model;
-const GEMMA_MODEL = config.ai.gemma.model;
+
+// Model constants
+const SARVAM_MODEL = config.ai.nvidia.model;       // sarvamai/sarvam-m
+const GEMMA_MODEL = config.ai.gemma.model;          // google/gemma-3-27b-it
+const DEEPSEEK_MODEL = config.ai.deepseek.model;    // deepseek-ai/deepseek-v3-2
+const QWQ_MODEL = config.ai.qwq.model;              // qwen/qwq-32b
+const QWEN_MODEL = config.ai.qwen.model;            // qwen/qwen3.5-122b-a10b
 
 // Lazy-initialized clients — avoid crash at import time if keys are missing
-let _sarvamClient = null;
-let _gemmaClient = null;
+const _clients = {};
 
-function getSarvamClient() {
-  if (!_sarvamClient) {
-    const apiKey = config.ai.nvidia.apiKey;
-    if (!apiKey) throw new Error('NVIDIA_API_KEY is not configured. Set it in environment variables.');
-    _sarvamClient = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
+function getClientFor(name, apiKeyGetter) {
+  if (!_clients[name]) {
+    const apiKey = apiKeyGetter();
+    if (!apiKey) throw new Error(`${name} API key is not configured. Set it in environment variables.`);
+    _clients[name] = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
   }
-  return _sarvamClient;
+  return _clients[name];
 }
 
-function getGemmaClient() {
-  if (!_gemmaClient) {
-    const apiKey = config.ai.gemma.apiKey;
-    if (!apiKey) throw new Error('GEMMA_API_KEY is not configured. Set it in environment variables.');
-    _gemmaClient = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
-  }
-  return _gemmaClient;
-}
+function getSarvamClient() { return getClientFor('sarvam', () => config.ai.nvidia.apiKey); }
+function getGemmaClient() { return getClientFor('gemma', () => config.ai.gemma.apiKey); }
+function getDeepSeekClient() { return getClientFor('deepseek', () => config.ai.deepseek.apiKey); }
+function getQwqClient() { return getClientFor('qwq', () => config.ai.qwq.apiKey); }
+function getQwenClient() { return getClientFor('qwen', () => config.ai.qwen.apiKey); }
 
 /**
  * Get the right client for a given model
  */
 function getClient(model) {
   if (model === GEMMA_MODEL) return getGemmaClient();
+  if (model === DEEPSEEK_MODEL) return getDeepSeekClient();
+  if (model === QWQ_MODEL) return getQwqClient();
+  if (model === QWEN_MODEL) return getQwenClient();
   return getSarvamClient();
 }
 
@@ -79,13 +86,13 @@ export async function callLLM({ systemPrompt, userPrompt, model, temperature = 0
 export async function callLLMJson({ systemPrompt, userPrompt, model, temperature = 0.3, maxTokens = 16384 }) {
   const raw = await callLLM({ systemPrompt, userPrompt, model, temperature, maxTokens });
 
-  // Strip markdown code fences if present (handles ```json, ``` ,```JSON, etc.)
+  // Strip markdown code fences if present (handles ```json, ```, ```JSON, etc.)
   let cleaned = raw.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json|JSON)?\s*\n?/, '').replace(/\n?```\s*$/, '');
   }
 
-  // Also strip any leading/trailing non-JSON text before/after the outermost braces
+  // Strip any leading/trailing non-JSON text before/after the outermost braces
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -101,7 +108,6 @@ export async function callLLMJson({ systemPrompt, userPrompt, model, temperature
     return JSON.parse(cleaned);
   } catch (err) {
     logger.warn(`Failed to parse LLM JSON response, attempting nested extraction. Error: ${err.message}`);
-    // Try to find the outermost balanced JSON object
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
@@ -175,4 +181,10 @@ export async function* streamLLM({ systemPrompt, userPrompt, model, temperature 
 }
 
 /** Expose model constants for routing */
-export const MODELS = { SARVAM: SARVAM_MODEL, GEMMA: GEMMA_MODEL };
+export const MODELS = {
+  SARVAM: SARVAM_MODEL,
+  GEMMA: GEMMA_MODEL,
+  DEEPSEEK: DEEPSEEK_MODEL,
+  QWQ: QWQ_MODEL,
+  QWEN: QWEN_MODEL,
+};

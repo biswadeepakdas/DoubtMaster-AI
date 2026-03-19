@@ -48,6 +48,18 @@ const config = {
       apiKey: process.env.GEMMA_API_KEY,
       model: process.env.GEMMA_MODEL || 'google/gemma-3-27b-it',
     },
+    deepseek: {
+      apiKey: process.env.DEEPSEEK_NIM_API_KEY,
+      model: process.env.DEEPSEEK_MODEL || 'deepseek-ai/deepseek-v3-2',
+    },
+    qwq: {
+      apiKey: process.env.QWQ_NIM_API_KEY,
+      model: process.env.QWQ_MODEL || 'qwen/qwq-32b',
+    },
+    qwen: {
+      apiKey: process.env.QWEN_NIM_API_KEY,
+      model: process.env.QWEN_MODEL || 'qwen/qwen3.5-122b-a10b',
+    },
   },
 
   aws: {
