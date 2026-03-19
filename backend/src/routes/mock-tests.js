@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.js';
 import { callLLMJson } from '../services/llm.js';
 import { getRedis } from '../db/redis.js';
 import { logger } from '../utils/logger.js';
+import { getPYQExamples } from '../prompts/mock-test-examples.js';
 
 const router = Router();
 
@@ -58,8 +59,22 @@ router.post('/start', async (req, res, next) => {
     const classLevel = config.class;
 
     // Generate questions via LLM
-    const systemPrompt = `You are an expert Indian education question paper setter. Generate high-quality multiple-choice questions. Return ONLY valid JSON, no extra text.`;
-    const userPrompt = `Generate ${questionCount} multiple-choice questions for ${subject} ${board} Class ${classLevel}. Each question should have 4 options (A, B, C, D) and exactly one correct answer. Cover a variety of topics and difficulty levels (easy, medium, hard). Use LaTeX notation (with $...$) for any mathematical expressions.
+    // Get real PYQ examples for few-shot prompting (prevents hallucination)
+    const pyqExamples = getPYQExamples(subject, board, classLevel);
+
+    const systemPrompt = `You are an expert Indian education question paper setter who has set papers for ${board} board exams. You follow the EXACT pattern of real ${board} question papers — same style, difficulty, topic distribution, and marking scheme. Return ONLY valid JSON, no extra text.`;
+    const userPrompt = `Generate ${questionCount} multiple-choice questions for ${subject} ${board} Class ${classLevel}.
+
+RULES:
+1. Each question MUST have exactly 4 options (A, B, C, D) and ONE correct answer
+2. Questions must cover a VARIETY of topics from the ${board} Class ${classLevel} ${subject} syllabus
+3. Difficulty mix: 30% easy, 50% medium, 20% hard
+4. Use LaTeX notation ($...$) for ALL mathematical expressions, chemical formulas, and scientific notation
+5. Questions must be ORIGINAL — do not copy from the examples below
+6. Each question must be self-contained (no references to diagrams or figures)
+7. Correct answers must be VERIFIABLE — no ambiguous or debatable options
+8. Options should be plausible (common misconceptions as distractors)
+${pyqExamples}
 
 Return JSON in this exact format:
 {
