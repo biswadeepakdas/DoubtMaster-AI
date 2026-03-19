@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { validate, schemas } from '../middleware/validate.js';
 import { authenticate, generateTokens } from '../middleware/auth.js';
@@ -7,8 +8,54 @@ import { AppError } from '../middleware/error.js';
 import { logger } from '../utils/logger.js';
 import config from '../config/index.js';
 import supabase from '../db/supabase.js';
+import { getRedis } from '../db/redis.js';
 
 const router = Router();
+
+// SECURITY: Bcrypt cost factor — 12 rounds is the current minimum recommendation
+const BCRYPT_ROUNDS = 12;
+
+/**
+ * SECURITY: Generate a cryptographically secure 6-digit OTP using crypto.randomInt.
+ * Math.random() is NOT suitable for security-sensitive values.
+ */
+function generateSecureOTP() {
+  return String(crypto.randomInt(100000, 999999));
+}
+
+/**
+ * SECURITY: Track OTP verification attempts to prevent brute-force.
+ * Allows max 5 attempts per identifier within a 15-minute window.
+ */
+async function checkOTPAttemptLimit(identifier) {
+  const key = `otp_attempts:${identifier}`;
+  try {
+    const redis = getRedis();
+    const attempts = await redis.incr(key);
+    if (attempts === 1) {
+      await redis.expire(key, 900); // 15 minutes
+    }
+    if (attempts > 5) {
+      throw new AppError('Too many OTP verification attempts. Please request a new OTP.', 429, 'OTP_ATTEMPTS_EXCEEDED');
+    }
+  } catch (err) {
+    if (err.code === 'OTP_ATTEMPTS_EXCEEDED') throw err;
+    // If Redis is unavailable, allow the request (fail open for OTP attempts)
+    logger.warn(`Redis OTP attempt tracking failed: ${err.message}`);
+  }
+}
+
+/**
+ * SECURITY: Clear OTP attempt counter after successful verification.
+ */
+async function clearOTPAttempts(identifier) {
+  try {
+    const redis = getRedis();
+    await redis.del(`otp_attempts:${identifier}`);
+  } catch (err) {
+    logger.warn(`Failed to clear OTP attempts: ${err.message}`);
+  }
+}
 
 /**
  * POST /api/v1/auth/signup
@@ -16,13 +63,22 @@ const router = Router();
  */
 router.post('/signup', authLimiter, async (req, res, next) => {
   try {
-    const { method, identifier, name, class: grade, board, plan, password } = req.body;
+    const { method, identifier: rawIdentifier, name, class: grade, board, plan, password, phone: rawPhone, email: rawEmail } = req.body;
+
+    // Support both frontend format (method+identifier) and direct format (phone/email)
+    let phone = rawPhone || null;
+    let email = rawEmail || null;
+    if (rawIdentifier) {
+      if (method === 'phone') phone = rawIdentifier;
+      else email = rawIdentifier;
+    }
+    const identifier = phone || email || rawIdentifier;
 
     if (!identifier || !name) {
       throw new AppError('Identifier and name are required', 400, 'VALIDATION_ERROR');
     }
 
-    const isPhone = method === 'phone';
+    const isPhone = !!phone || method === 'phone';
     const queryField = isPhone ? 'phone' : 'email';
 
     // Check if user exists
@@ -35,7 +91,7 @@ router.post('/signup', authLimiter, async (req, res, next) => {
     if (existing) throw new AppError('User already exists', 409, 'USER_EXISTS');
 
     // Hash password if provided
-    const passwordHash = password ? await bcrypt.hash(password, 10) : null;
+    const passwordHash = password ? await bcrypt.hash(password, BCRYPT_ROUNDS) : null;
 
     // Create user
     const { data: user, error } = await supabase.from('users').insert({
@@ -44,14 +100,19 @@ router.post('/signup', authLimiter, async (req, res, next) => {
       name,
       class: grade,
       board,
-      plan: plan || 'free',
+      // SECURITY: Always start as 'free' — plan upgrades only via verified payment webhooks
+      plan: 'free',
       password_hash: passwordHash,
     }).select().single();
 
-    if (error) throw new AppError(`Registration failed: ${error.message}`, 500, 'DB_ERROR');
+    if (error) {
+      // SECURITY: Do not leak DB error details to the client
+      logger.error(`Registration DB error: ${error.message}`);
+      throw new AppError('Registration failed. Please try again.', 500, 'DB_ERROR');
+    }
 
     if (isPhone) {
-      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const otp = generateSecureOTP();
       await supabase.from('otp_store').upsert({
         identifier,
         otp,
@@ -91,7 +152,7 @@ router.post('/login/otp', authLimiter, async (req, res, next) => {
 
     if (!user) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otp = generateSecureOTP();
     await supabase.from('otp_store').upsert({
       identifier: phone,
       otp,
@@ -118,16 +179,25 @@ router.post('/verify-signup', authLimiter, async (req, res, next) => {
     const { identifier, otp, method } = req.body;
     if (!identifier || !otp) throw new AppError('Identifier and OTP are required', 400, 'VALIDATION_ERROR');
 
+    // SECURITY: Prevent OTP brute-force (max 5 attempts per identifier)
+    await checkOTPAttemptLimit(identifier);
+
     const { data: stored } = await supabase.from('otp_store')
       .select('otp, expires_at').eq('identifier', identifier).maybeSingle();
 
-    if (!stored || stored.otp !== otp) throw new AppError('Invalid OTP', 401, 'INVALID_OTP');
+    // SECURITY: Use timing-safe comparison for OTP to prevent timing attacks
+    const otpMatch = stored && stored.otp && otp &&
+      stored.otp.length === otp.length &&
+      crypto.timingSafeEqual(Buffer.from(stored.otp), Buffer.from(otp));
+
+    if (!stored || !otpMatch) throw new AppError('Invalid OTP', 401, 'INVALID_OTP');
     if (new Date(stored.expires_at) < new Date()) {
       await supabase.from('otp_store').delete().eq('identifier', identifier);
       throw new AppError('OTP expired', 401, 'OTP_EXPIRED');
     }
 
     await supabase.from('otp_store').delete().eq('identifier', identifier);
+    await clearOTPAttempts(identifier);
 
     const isPhone = method === 'phone';
     const queryField = isPhone ? 'phone' : 'email';
@@ -158,7 +228,7 @@ router.post('/resend-otp', authLimiter, async (req, res, next) => {
       .select('id').eq(queryField, identifier).maybeSingle();
     if (!user) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otp = generateSecureOTP();
     await supabase.from('otp_store').upsert({
       identifier,
       otp,
@@ -182,9 +252,16 @@ router.post('/resend-otp', authLimiter, async (req, res, next) => {
  */
 router.post('/register', authLimiter, validate(schemas.register), async (req, res, next) => {
   try {
-    const { phone, email, name, class: grade, board, language } = req.validated;
+    const { phone: rawPhone, email: rawEmail, name, class: grade, board, language } = req.validated;
 
-    // Check if user exists
+    // Support both frontend format (method+identifier) and direct format (phone/email)
+    const { method, identifier: rawIdentifier, plan } = req.body;
+    let phone = rawPhone || null;
+    let email = rawEmail || null;
+    if (rawIdentifier && !phone && !email) {
+      if (method === 'phone') phone = rawIdentifier;
+      else email = rawIdentifier;
+    }
     const identifier = phone || email;
     const { data: existing } = phone
       ? await supabase.from('users').select('id').eq('phone', phone).maybeSingle()
@@ -202,10 +279,14 @@ router.post('/register', authLimiter, validate(schemas.register), async (req, re
       language,
     }).select().single();
 
-    if (error) throw new AppError(`Registration failed: ${error.message}`, 500, 'DB_ERROR');
+    if (error) {
+      // SECURITY: Do not leak DB error details to the client
+      logger.error(`Registration DB error: ${error.message}`);
+      throw new AppError('Registration failed. Please try again.', 500, 'DB_ERROR');
+    }
 
     if (phone) {
-      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const otp = generateSecureOTP();
       await supabase.from('otp_store').upsert({
         identifier: phone,
         otp,
@@ -235,16 +316,25 @@ router.post('/verify-otp', authLimiter, async (req, res, next) => {
     const { phone, otp } = req.body;
     if (!phone || !otp) throw new AppError('Phone and OTP are required', 400, 'VALIDATION_ERROR');
 
+    // SECURITY: Prevent OTP brute-force (max 5 attempts per phone)
+    await checkOTPAttemptLimit(phone);
+
     const { data: stored } = await supabase.from('otp_store')
       .select('otp, expires_at').eq('identifier', phone).maybeSingle();
 
-    if (!stored || stored.otp !== otp) throw new AppError('Invalid OTP', 401, 'INVALID_OTP');
+    // SECURITY: Use timing-safe comparison for OTP
+    const otpMatch = stored && stored.otp && otp &&
+      stored.otp.length === otp.length &&
+      crypto.timingSafeEqual(Buffer.from(stored.otp), Buffer.from(otp));
+
+    if (!stored || !otpMatch) throw new AppError('Invalid OTP', 401, 'INVALID_OTP');
     if (new Date(stored.expires_at) < new Date()) {
       await supabase.from('otp_store').delete().eq('identifier', phone);
       throw new AppError('OTP expired', 401, 'OTP_EXPIRED');
     }
 
     await supabase.from('otp_store').delete().eq('identifier', phone);
+    await clearOTPAttempts(phone);
 
     const { data: user } = await supabase.from('users')
       .select('*').eq('phone', phone).single();
@@ -273,7 +363,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
     if (!user) throw new AppError('User not found', 404, 'USER_NOT_FOUND');
 
     if (phone) {
-      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const otp = generateSecureOTP();
       await supabase.from('otp_store').upsert({
         identifier: phone,
         otp,
@@ -313,16 +403,34 @@ router.post('/login', authLimiter, async (req, res, next) => {
 /**
  * POST /api/auth/refresh
  */
-router.post('/refresh', async (req, res, next) => {
+router.post('/refresh', authLimiter, async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) throw new AppError('Refresh token required', 400, 'VALIDATION_ERROR');
 
     const jwt = await import('jsonwebtoken');
     const config = (await import('../config/index.js')).default;
-    const decoded = jwt.default.verify(refreshToken, config.jwt.secret);
+    // SECURITY: Explicitly require HS256 to prevent algorithm confusion
+    const decoded = jwt.default.verify(refreshToken, config.jwt.secret, { algorithms: ['HS256'] });
 
     if (decoded.type !== 'refresh') throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');
+
+    // SECURITY: Refresh token rotation — invalidate old token via Redis blocklist
+    try {
+      const redis = getRedis();
+      const tokenId = `rt:${refreshToken.slice(-16)}`; // Use last 16 chars as key
+      const alreadyUsed = await redis.get(tokenId);
+      if (alreadyUsed) {
+        // Token reuse detected — potential token theft, invalidate all tokens for this user
+        logger.warn(`Refresh token reuse detected for user ${decoded.id} — possible token theft`);
+        throw new AppError('Refresh token already used. Please log in again.', 401, 'TOKEN_REUSED');
+      }
+      // Mark this refresh token as used (keep for the duration of its max lifetime)
+      await redis.set(tokenId, '1', 'EX', 7 * 24 * 3600); // 7 days
+    } catch (err) {
+      if (err.code === 'TOKEN_REUSED') throw err;
+      logger.warn(`Redis refresh token rotation check failed: ${err.message}`);
+    }
 
     const { data: user } = await supabase.from('users')
       .select('*').eq('id', decoded.id).single();

@@ -1,8 +1,8 @@
 /**
  * Home Screen - Main landing with one-tap camera solve
- * Agent 7: Frontend Engineer | Agent 8: UI/UX Designer
+ * Fetches real streak / progress data on mount.
  */
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,20 +10,75 @@ import {
   ScrollView,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useAppStore, useAuthStore } from '../store/authStore.js';
+import { userAPI } from '../services/api.js';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuthStore();
-  const { currentStreak, todaySolved, isDarkMode, recentQuestions } = useAppStore();
+  const {
+    currentStreak,
+    todaySolved,
+    isDarkMode,
+    recentQuestions,
+    setStreak,
+  } = useAppStore();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [plan, setPlan] = useState(user?.plan || 'free');
 
   const theme = isDarkMode ? darkTheme : lightTheme;
 
+  const fetchData = useCallback(async () => {
+    setError(null);
+    try {
+      const [streakRes, profileRes] = await Promise.all([
+        userAPI.getStreak().catch(() => null),
+        userAPI.getProfile().catch(() => null),
+      ]);
+      if (streakRes?.data?.currentStreak != null) {
+        setStreak(streakRes.data.currentStreak);
+      }
+      if (profileRes?.data?.plan) {
+        setPlan(profileRes.data.plan);
+      }
+    } catch {
+      setError('Could not load latest data.');
+    }
+  }, [setStreak]);
+
+  useEffect(() => {
+    fetchData().finally(() => setIsLoading(false));
+  }, [fetchData]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    setIsRefreshing(false);
+  }, [fetchData]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color="#6366F1" />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#6366F1" />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -34,33 +89,24 @@ export default function HomeScreen({ navigation }) {
               Kya solve karein?
             </Text>
           </View>
-          <View style={styles.streakBadge}>
+          <View style={styles.streakBadge} accessible accessibilityLabel={`Current streak ${currentStreak} days`}>
             <Text style={styles.streakEmoji}>{'🔥'}</Text>
             <Text style={[styles.streakCount, { color: theme.text }]}>{currentStreak}</Text>
           </View>
         </View>
 
+        {/* Error banner */}
+        {error && (
+          <View style={styles.errorBanner} accessible accessibilityRole="alert">
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         {/* Quick Stats */}
         <View style={styles.statsRow}>
-          <StatCard
-            label="Today"
-            value={todaySolved}
-            target={10}
-            color="#6366F1"
-            theme={theme}
-          />
-          <StatCard
-            label="Streak"
-            value={`${currentStreak} days`}
-            color="#F59E0B"
-            theme={theme}
-          />
-          <StatCard
-            label="Plan"
-            value={user?.plan === 'free' ? 'Free' : 'Pro'}
-            color="#10B981"
-            theme={theme}
-          />
+          <StatCard label="Today" value={todaySolved} target={10} color="#6366F1" theme={theme} />
+          <StatCard label="Streak" value={`${currentStreak} days`} color="#F59E0B" theme={theme} />
+          <StatCard label="Plan" value={plan === 'free' ? 'Free' : 'Pro'} color="#10B981" theme={theme} />
         </View>
 
         {/* Camera Solve Button (Primary CTA) */}
@@ -68,6 +114,8 @@ export default function HomeScreen({ navigation }) {
           style={styles.cameraButton}
           onPress={() => navigation.navigate('Camera')}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Photo Solve - take a photo of any question"
         >
           <View style={styles.cameraButtonInner}>
             <Text style={styles.cameraIcon}>{'📸'}</Text>
@@ -79,7 +127,9 @@ export default function HomeScreen({ navigation }) {
         {/* Text Input Option */}
         <TouchableOpacity
           style={[styles.textInputButton, { backgroundColor: theme.surface }]}
-          onPress={() => navigation.navigate('TextSolve')}
+          onPress={() => navigation.navigate('Camera')}
+          accessibilityRole="button"
+          accessibilityLabel="Type your question"
         >
           <Text style={styles.textInputIcon}>{'✏️'}</Text>
           <Text style={[styles.textInputLabel, { color: theme.text }]}>Type your question</Text>
@@ -88,30 +138,10 @@ export default function HomeScreen({ navigation }) {
         {/* Quick Access */}
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Access</Text>
         <View style={styles.quickAccessRow}>
-          <QuickAccessCard
-            icon="📚"
-            label="NCERT"
-            onPress={() => navigation.navigate('NCERTBrowser')}
-            theme={theme}
-          />
-          <QuickAccessCard
-            icon="🎯"
-            label="JEE/NEET"
-            onPress={() => navigation.navigate('ExamPrep')}
-            theme={theme}
-          />
-          <QuickAccessCard
-            icon="📝"
-            label="Mock Test"
-            onPress={() => navigation.navigate('MockTest')}
-            theme={theme}
-          />
-          <QuickAccessCard
-            icon="📊"
-            label="Progress"
-            onPress={() => navigation.navigate('Progress')}
-            theme={theme}
-          />
+          <QuickAccessCard icon="📚" label="NCERT" onPress={() => {}} theme={theme} />
+          <QuickAccessCard icon="🎯" label="JEE/NEET" onPress={() => {}} theme={theme} />
+          <QuickAccessCard icon="📝" label="Mock Test" onPress={() => {}} theme={theme} />
+          <QuickAccessCard icon="📊" label="Progress" onPress={() => navigation.navigate('Progress')} theme={theme} />
         </View>
 
         {/* Recent Questions */}
@@ -123,6 +153,8 @@ export default function HomeScreen({ navigation }) {
                 key={q.id || i}
                 style={[styles.recentItem, { backgroundColor: theme.surface }]}
                 onPress={() => navigation.navigate('Solution', { questionId: q.id })}
+                accessibilityRole="button"
+                accessibilityLabel={`Recent question: ${q.extractedText || 'Question'}`}
               >
                 <View style={[styles.subjectBadge, { backgroundColor: getSubjectColor(q.subject) }]}>
                   <Text style={styles.subjectBadgeText}>{q.subject?.[0]?.toUpperCase() || 'Q'}</Text>
@@ -141,10 +173,12 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* Upgrade Banner (Free users) */}
-        {user?.plan === 'free' && (
+        {plan === 'free' && (
           <TouchableOpacity
             style={styles.upgradeBanner}
-            onPress={() => navigation.navigate('Subscription')}
+            onPress={() => {}}
+            accessibilityRole="button"
+            accessibilityLabel="Upgrade to Pro plan"
           >
             <Text style={styles.upgradeBannerTitle}>Unlock Unlimited Solves</Text>
             <Text style={styles.upgradeBannerSubtext}>
@@ -159,7 +193,7 @@ export default function HomeScreen({ navigation }) {
 
 function StatCard({ label, value, target, color, theme }) {
   return (
-    <View style={[styles.statCard, { backgroundColor: theme.surface }]}>
+    <View style={[styles.statCard, { backgroundColor: theme.surface }]} accessible accessibilityLabel={`${label}: ${value}${target ? ` of ${target}` : ''}`}>
       <View style={[styles.statDot, { backgroundColor: color }]} />
       <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
@@ -174,6 +208,8 @@ function QuickAccessCard({ icon, label, onPress, theme }) {
     <TouchableOpacity
       style={[styles.quickAccessCard, { backgroundColor: theme.surface }]}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <Text style={styles.quickAccessIcon}>{icon}</Text>
       <Text style={[styles.quickAccessLabel, { color: theme.text }]}>{label}</Text>
@@ -202,12 +238,16 @@ const darkTheme = {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 50 },
+  centered: { justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 20 },
   greeting: { fontSize: 14 },
   title: { fontSize: 24, fontWeight: '700', marginTop: 4 },
   streakBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   streakEmoji: { fontSize: 18, marginRight: 4 },
   streakCount: { fontSize: 16, fontWeight: '700' },
+
+  errorBanner: { marginHorizontal: 20, marginBottom: 12, backgroundColor: '#FEE2E2', padding: 12, borderRadius: 8 },
+  errorText: { color: '#DC2626', textAlign: 'center', fontSize: 14 },
 
   statsRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 20 },
   statCard: { flex: 1, padding: 12, borderRadius: 12, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 },

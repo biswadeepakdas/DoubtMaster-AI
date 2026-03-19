@@ -34,6 +34,17 @@ export function getRedis() {
       startReconnectMonitor();
     });
   }
+
+  // Guard against returning a client that is not yet usable.
+  // If the client is in 'wait' or 'end' state, attempt to reconnect.
+  if (redis.status === 'wait' || redis.status === 'end') {
+    logger.warn(`Redis client in "${redis.status}" state – attempting reconnect`);
+    redis.connect().catch((err) => {
+      logger.error(`Redis reconnect failed: ${err.message}`);
+      startReconnectMonitor();
+    });
+  }
+
   return redis;
 }
 

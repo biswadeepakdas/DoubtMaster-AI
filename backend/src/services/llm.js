@@ -79,21 +79,38 @@ export async function callLLM({ systemPrompt, userPrompt, model, temperature = 0
 export async function callLLMJson({ systemPrompt, userPrompt, model, temperature = 0.3, maxTokens = 16384 }) {
   const raw = await callLLM({ systemPrompt, userPrompt, model, temperature, maxTokens });
 
-  // Strip markdown code fences if present
+  // Strip markdown code fences if present (handles ```json, ``` ,```JSON, etc.)
   let cleaned = raw.trim();
   if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+    cleaned = cleaned.replace(/^```(?:json|JSON)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+  }
+
+  // Also strip any leading/trailing non-JSON text before/after the outermost braces
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = cleaned.substring(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // Fall through to further extraction attempts
+    }
   }
 
   try {
     return JSON.parse(cleaned);
   } catch (err) {
-    logger.warn(`Failed to parse LLM JSON response, attempting extraction. Error: ${err.message}`);
+    logger.warn(`Failed to parse LLM JSON response, attempting nested extraction. Error: ${err.message}`);
+    // Try to find the outermost balanced JSON object
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (innerErr) {
+        logger.warn(`Nested JSON extraction also failed: ${innerErr.message}`);
+      }
     }
-    throw new Error(`LLM returned invalid JSON: ${cleaned.substring(0, 200)}`);
+    throw new Error(`LLM returned invalid JSON: ${cleaned.substring(0, 300)}`);
   }
 }
 

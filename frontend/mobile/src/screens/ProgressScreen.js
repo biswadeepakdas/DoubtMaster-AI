@@ -1,8 +1,18 @@
 /**
  * Progress Screen - Learning dashboard with weakness analysis
+ * Fetches real data from the API with proper loading / error / retry states.
  */
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
 import { userAPI } from '../services/api.js';
 
 const { width } = Dimensions.get('window');
@@ -10,12 +20,12 @@ const { width } = Dimensions.get('window');
 export default function ProgressScreen() {
   const [progress, setProgress] = useState(null);
   const [weaknesses, setWeaknesses] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    setError(null);
     try {
       const [progressRes, weaknessRes] = await Promise.all([
         userAPI.getProgress(),
@@ -23,91 +33,177 @@ export default function ProgressScreen() {
       ]);
       setProgress(progressRes.data);
       setWeaknesses(weaknessRes.data);
-    } catch {
-      // Use demo data
-      setProgress({
-        overall: { totalSolved: 247, accuracy: 82, streak: 7, bestStreak: 21, rank: 'Rising Star' },
-        bySubject: {
-          math: { solved: 120, accuracy: 85, level: 'Advanced' },
-          physics: { solved: 65, accuracy: 78, level: 'Intermediate' },
-          chemistry: { solved: 42, accuracy: 80, level: 'Intermediate' },
-          biology: { solved: 20, accuracy: 90, level: 'Beginner' },
-        },
-        dailyGoal: { target: 10, completed: 7 },
-        weeklyActivity: [5, 8, 12, 6, 10, 15, 7],
-      });
-      setWeaknesses({
-        weakTopics: [
-          { subject: 'math', topic: 'Trigonometry', errorRate: 0.45, questionsAttempted: 20 },
-          { subject: 'physics', topic: 'Optics', errorRate: 0.35, questionsAttempted: 12 },
-        ],
-      });
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Failed to load progress data.';
+      setError(msg);
     }
-  };
+  }, []);
 
-  if (!progress) {
-    return <View style={styles.container}><Text style={styles.loading}>Loading...</Text></View>;
+  useEffect(() => {
+    loadData().finally(() => setIsLoading(false));
+  }, [loadData]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadData();
+    setIsRefreshing(false);
+  }, [loadData]);
+
+  // ---------------------------------------------------------------------------
+  // Loading
+  // ---------------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#6366F1" />
+        <Text style={styles.loadingText}>Loading your progress...</Text>
+      </View>
+    );
   }
 
+  // ---------------------------------------------------------------------------
+  // Error (no data at all)
+  // ---------------------------------------------------------------------------
+  if (error && !progress) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorTitle}>Could not load progress</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            setIsLoading(true);
+            loadData().finally(() => setIsLoading(false));
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading progress"
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Data loaded
+  // ---------------------------------------------------------------------------
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#6366F1" />
+        }
+      >
         <Text style={styles.title}>Your Progress</Text>
 
+        {/* Inline error banner (data loaded but refresh failed) */}
+        {error && (
+          <View style={styles.errorBanner} accessible accessibilityRole="alert">
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </View>
+        )}
+
         {/* Overall Stats */}
-        <View style={styles.overallCard}>
-          <View style={styles.rankBadge}>
-            <Text style={styles.rankText}>{progress.overall.rank}</Text>
+        {progress?.overall && (
+          <View style={styles.overallCard} accessible accessibilityLabel="Overall statistics">
+            <View style={styles.rankBadge}>
+              <Text style={styles.rankText}>{progress.overall.rank}</Text>
+            </View>
+            <View style={styles.statsGrid}>
+              <StatItem label="Total Solved" value={progress.overall.totalSolved} />
+              <StatItem label="Accuracy" value={`${progress.overall.accuracy}%`} />
+              <StatItem label="Streak" value={`${progress.overall.streak} days`} />
+              <StatItem label="Best Streak" value={`${progress.overall.bestStreak} days`} />
+            </View>
           </View>
-          <View style={styles.statsGrid}>
-            <StatItem label="Total Solved" value={progress.overall.totalSolved} />
-            <StatItem label="Accuracy" value={`${progress.overall.accuracy}%`} />
-            <StatItem label="Streak" value={`${progress.overall.streak} days`} />
-            <StatItem label="Best Streak" value={`${progress.overall.bestStreak} days`} />
-          </View>
-        </View>
+        )}
 
         {/* Daily Goal */}
-        <View style={styles.goalCard}>
-          <Text style={styles.goalTitle}>Daily Goal</Text>
-          <View style={styles.goalBar}>
-            <View style={[styles.goalFill, { width: `${(progress.dailyGoal.completed / progress.dailyGoal.target) * 100}%` }]} />
+        {progress?.dailyGoal && (
+          <View style={styles.goalCard} accessible accessibilityLabel={`Daily goal: ${progress.dailyGoal.completed} of ${progress.dailyGoal.target} questions`}>
+            <Text style={styles.goalTitle}>Daily Goal</Text>
+            <View style={styles.goalBar}>
+              <View
+                style={[
+                  styles.goalFill,
+                  {
+                    width: `${Math.min(
+                      (progress.dailyGoal.completed / progress.dailyGoal.target) * 100,
+                      100
+                    )}%`,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.goalText}>
+              {progress.dailyGoal.completed}/{progress.dailyGoal.target} questions
+            </Text>
           </View>
-          <Text style={styles.goalText}>{progress.dailyGoal.completed}/{progress.dailyGoal.target} questions</Text>
-        </View>
+        )}
 
         {/* Subject Breakdown */}
-        <Text style={styles.sectionTitle}>Subject Performance</Text>
-        {Object.entries(progress.bySubject).map(([subject, data]) => (
-          <View key={subject} style={styles.subjectCard}>
-            <View style={[styles.subjectIcon, { backgroundColor: getSubjectColor(subject) }]}>
-              <Text style={styles.subjectIconText}>{subject[0].toUpperCase()}</Text>
-            </View>
-            <View style={styles.subjectInfo}>
-              <Text style={styles.subjectName}>{subject.charAt(0).toUpperCase() + subject.slice(1)}</Text>
-              <Text style={styles.subjectMeta}>{data.solved} solved | {data.accuracy}% accuracy</Text>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${data.accuracy}%`, backgroundColor: getSubjectColor(subject) }]} />
+        {progress?.bySubject && (
+          <>
+            <Text style={styles.sectionTitle}>Subject Performance</Text>
+            {Object.entries(progress.bySubject).map(([subject, data]) => (
+              <View
+                key={subject}
+                style={styles.subjectCard}
+                accessible
+                accessibilityLabel={`${subject}: ${data.solved} solved, ${data.accuracy} percent accuracy, level ${data.level}`}
+              >
+                <View style={[styles.subjectIcon, { backgroundColor: getSubjectColor(subject) }]}>
+                  <Text style={styles.subjectIconText}>{subject[0].toUpperCase()}</Text>
+                </View>
+                <View style={styles.subjectInfo}>
+                  <Text style={styles.subjectName}>
+                    {subject.charAt(0).toUpperCase() + subject.slice(1)}
+                  </Text>
+                  <Text style={styles.subjectMeta}>
+                    {data.solved} solved | {data.accuracy}% accuracy
+                  </Text>
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${data.accuracy}%`,
+                          backgroundColor: getSubjectColor(subject),
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <View style={styles.levelBadge}>
+                  <Text style={styles.levelText}>{data.level}</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>{data.level}</Text>
-            </View>
-          </View>
-        ))}
+            ))}
+          </>
+        )}
 
         {/* Weaknesses */}
         {weaknesses?.weakTopics?.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Areas to Improve</Text>
             {weaknesses.weakTopics.map((topic, i) => (
-              <View key={i} style={styles.weaknessCard}>
+              <View
+                key={i}
+                style={styles.weaknessCard}
+                accessible
+                accessibilityLabel={`${topic.subject} ${topic.topic}: ${Math.round(topic.errorRate * 100)} percent error rate`}
+              >
                 <View style={styles.weaknessHeader}>
                   <Text style={styles.weaknessSubject}>{topic.subject}</Text>
                   <Text style={styles.weaknessTopic}>{topic.topic}</Text>
                 </View>
                 <Text style={styles.weaknessDetail}>
-                  Error rate: {Math.round(topic.errorRate * 100)}% ({topic.questionsAttempted} questions)
+                  Error rate: {Math.round(topic.errorRate * 100)}% ({topic.questionsAttempted}{' '}
+                  questions)
                 </Text>
                 <View style={styles.weaknessBar}>
                   <View style={[styles.weaknessFill, { width: `${topic.errorRate * 100}%` }]} />
@@ -125,7 +221,7 @@ export default function ProgressScreen() {
 
 function StatItem({ label, value }) {
   return (
-    <View style={styles.statItem}>
+    <View style={styles.statItem} accessible accessibilityLabel={`${label}: ${value}`}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -133,12 +229,24 @@ function StatItem({ label, value }) {
 }
 
 function getSubjectColor(subject) {
-  return { math: '#6366F1', physics: '#3B82F6', chemistry: '#10B981', biology: '#F59E0B' }[subject] || '#6366F1';
+  return (
+    { math: '#6366F1', physics: '#3B82F6', chemistry: '#10B981', biology: '#F59E0B' }[subject] ||
+    '#6366F1'
+  );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: 50 },
-  loading: { textAlign: 'center', marginTop: 100, color: '#64748B' },
+  centered: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
+  loadingText: { marginTop: 12, color: '#64748B', fontSize: 14 },
+
+  errorTitle: { fontSize: 20, fontWeight: '700', color: '#DC2626', marginBottom: 8 },
+  errorMessage: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 16 },
+  retryButton: { backgroundColor: '#6366F1', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  retryButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  errorBanner: { marginHorizontal: 16, marginBottom: 12, backgroundColor: '#FEE2E2', padding: 12, borderRadius: 8 },
+  errorBannerText: { color: '#DC2626', textAlign: 'center', fontSize: 14 },
+
   title: { fontSize: 24, fontWeight: '700', color: '#1E293B', paddingHorizontal: 20, marginBottom: 16 },
 
   overallCard: { marginHorizontal: 16, padding: 20, backgroundColor: '#FFFFFF', borderRadius: 16, elevation: 2, marginBottom: 12 },

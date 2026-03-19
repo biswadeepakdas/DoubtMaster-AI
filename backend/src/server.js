@@ -50,7 +50,8 @@ app.use('/api/webhooks', webhookRoutes); // Backwards compatibility alias
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+// SECURITY: Limit URL-encoded body size to prevent large payload attacks
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(compression());
 
 // Health check
@@ -111,8 +112,9 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Trigger graceful shutdown — unhandled rejections indicate unpredictable state
-  gracefulShutdown('unhandledRejection');
+  // Log but do not kill the server — unhandled rejections are usually
+  // individual request/task failures that should not take down the whole
+  // process. Only uncaughtException warrants a shutdown.
 });
 
 process.on('uncaughtException', (error) => {

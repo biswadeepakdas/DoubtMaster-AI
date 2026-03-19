@@ -1,0 +1,74 @@
+# DoubtMaster AI - Production Docker Compose Override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This file overrides the base docker-compose.yml for production:
+#   - Removes all external port mappings for postgres and redis
+#   - Enforces read-only filesystems where possible
+#   - Adds security-hardened settings
+#   - Requires all secrets via environment variables (no defaults)
+
+services:
+  # Backend API — production overrides
+  api:
+    restart: always
+    environment:
+      NODE_ENV: production
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+
+  # PostgreSQL — no external ports in production
+  postgres:
+    ports: []
+    restart: always
+    environment:
+      POSTGRES_DB: doubtmaster
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set for production}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    # SECURITY: ssl=off is acceptable ONLY when postgres is on a private Docker network
+    # with no external port exposure. If postgres is reachable over a network, enable SSL.
+    command: >
+      postgres
+        -c ssl=off
+        -c log_connections=on
+        -c log_disconnections=on
+        -c log_statement=ddl
+        -c shared_preload_libraries=pg_stat_statements
+        -c password_encryption=scram-sha-256
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.0'
+
+  # Redis — no external ports in production, password required
+  redis:
+    ports: []
+    restart: always
+    command: >
+      redis-server
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set for production}
+        --rename-command FLUSHALL ""
+        --rename-command FLUSHDB ""
+        --rename-command CONFIG ""
+        --rename-command DEBUG ""
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'

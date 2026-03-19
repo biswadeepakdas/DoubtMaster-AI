@@ -1,7 +1,9 @@
 /**
  * App Navigator - Main navigation structure
+ * Auth guard: unauthenticated users only see Login / Signup.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -12,10 +14,38 @@ import HomeScreen from '../screens/HomeScreen.js';
 import CameraScreen from '../screens/CameraScreen.js';
 import SolutionScreen from '../screens/SolutionScreen.js';
 import ProgressScreen from '../screens/ProgressScreen.js';
+import LoginScreen from '../screens/LoginScreen.js';
+import SignupScreen from '../screens/SignupScreen.js';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+const AuthStack = createStackNavigator();
 
+// ---------------------------------------------------------------------------
+// Deep linking configuration
+// ---------------------------------------------------------------------------
+const linking = {
+  prefixes: ['doubtmaster://', 'https://doubtmaster.ai'],
+  config: {
+    screens: {
+      MainTabs: {
+        screens: {
+          Home: 'home',
+          Camera: 'camera',
+          Progress: 'progress',
+          Profile: 'profile',
+        },
+      },
+      Solution: 'solution/:questionId',
+      Login: 'login',
+      Signup: 'signup',
+    },
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Tab navigator (authenticated)
+// ---------------------------------------------------------------------------
 function HomeTabs() {
   return (
     <Tab.Navigator
@@ -58,36 +88,80 @@ function HomeTabs() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Profile placeholder
+// ---------------------------------------------------------------------------
 function ProfilePlaceholder() {
-  const { logout } = useAuthStore();
-  const React = require('react');
-  const { View, Text, TouchableOpacity, StyleSheet } = require('react-native');
+  const { logout, user } = useAuthStore();
+
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-      <Text style={{ fontSize: 24, fontWeight: '700', color: '#1E293B' }}>Profile</Text>
+    <View style={profileStyles.container} accessible accessibilityLabel="Profile screen">
+      <Text style={profileStyles.name}>{user?.name || 'Student'}</Text>
+      <Text style={profileStyles.email}>{user?.email || ''}</Text>
       <TouchableOpacity
-        style={{ marginTop: 20, backgroundColor: '#EF4444', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+        style={profileStyles.logoutButton}
         onPress={logout}
+        accessibilityRole="button"
+        accessibilityLabel="Log out"
       >
-        <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Logout</Text>
+        <Text style={profileStyles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
+const profileStyles = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
+  name: { fontSize: 24, fontWeight: '700', color: '#1E293B' },
+  email: { fontSize: 14, color: '#64748B', marginTop: 4 },
+  logoutButton: { marginTop: 24, backgroundColor: '#EF4444', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  logoutText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+});
+
+// ---------------------------------------------------------------------------
+// Auth flow screens (unauthenticated)
+// ---------------------------------------------------------------------------
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator screenOptions={{ headerShown: false, animationEnabled: true }}>
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Signup" component={SignupScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Root navigator
+// ---------------------------------------------------------------------------
 export default function AppNavigator() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading, initializeAuth } = useAuthStore();
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+        <ActivityIndicator size="large" color="#6366F1" />
+      </View>
+    );
+  }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <>
             <Stack.Screen name="MainTabs" component={HomeTabs} />
-            <Stack.Screen name="Solution" component={SolutionScreen} />
+            <Stack.Screen
+              name="Solution"
+              component={SolutionScreen}
+              options={{ animationEnabled: true }}
+            />
           </>
         ) : (
-          <Stack.Screen name="MainTabs" component={HomeTabs} />
+          <Stack.Screen name="Auth" component={AuthNavigator} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

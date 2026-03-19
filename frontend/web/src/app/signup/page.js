@@ -11,6 +11,15 @@ import {
 const CLASSES = [6, 7, 8, 9, 10, 11, 12];
 const BOARDS = ['CBSE', 'ICSE', 'State Board', 'JEE', 'NEET'];
 
+// Map frontend-friendly board names to backend enum values
+const BOARD_MAP = {
+  'CBSE': 'CBSE',
+  'ICSE': 'ICSE',
+  'State Board': 'STATE_OTHER',
+  'JEE': 'CBSE',
+  'NEET': 'CBSE',
+};
+
 export default function SignupPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" /></div>}>
@@ -74,7 +83,7 @@ function SignupContent() {
     if (!name.trim()) { setError('Please enter your name'); return; }
     if (!selectedClass) { setError('Please select your class'); return; }
     if (!selectedBoard) { setError('Please select your board'); return; }
-    if (method === 'email' && password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    if (method === 'email' && password.length < 6) { setError('Password must be at least 6 characters'); return; }
 
     setLoading(true);
     try {
@@ -86,8 +95,8 @@ function SignupContent() {
           method,
           identifier,
           name: name.trim(),
-          class: selectedClass,
-          board: selectedBoard,
+          class: parseInt(selectedClass, 10),
+          board: BOARD_MAP[selectedBoard] || selectedBoard,
           plan: selectedPlan,
           ...(method === 'email' && { password }),
         }),
@@ -95,17 +104,18 @@ function SignupContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Signup failed');
 
-      if (data.token || data.accessToken) {
-        // Email signup — tokens returned directly, go to dashboard
-        localStorage.setItem('dm-token', data.token || data.accessToken);
-        if (data.refreshToken) localStorage.setItem('dm-refresh-token', data.refreshToken);
-        router.push('/dashboard');
-      } else {
-        // Phone signup — needs OTP verification
+      if (data.requiresVerification) {
+        // Phone signup: OTP was sent, redirect to verify page
         sessionStorage.setItem('dm-otp-identifier', identifier);
         sessionStorage.setItem('dm-otp-method', method);
         sessionStorage.setItem('dm-otp-name', name.trim());
         router.push('/verify-otp?action=signup');
+      } else {
+        // Email signup: tokens returned directly, go to dashboard
+        const token = data.token || data.accessToken;
+        if (token) localStorage.setItem('dm-token', token);
+        if (data.refreshToken) localStorage.setItem('dm-refresh-token', data.refreshToken);
+        router.push('/dashboard');
       }
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -129,7 +139,7 @@ function SignupContent() {
           <span className="text-xl font-bold text-slate-900 dark:text-white">DoubtMaster <span className="text-teal-600 dark:text-teal-400">AI</span></span>
         </Link>
         <div className="flex items-center gap-3">
-          <button onClick={toggleDark} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={toggleDark} aria-label="Toggle dark mode" className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             {dark ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-slate-600" />}
           </button>
           <Link href="/login" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
@@ -162,6 +172,14 @@ function SignupContent() {
               <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                 {step === 1 ? 'Free forever for NCERT. No credit card needed.' : 'Tell us about yourself'}
               </p>
+              {/* Step progress indicator */}
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-8 h-1.5 rounded-full transition-colors duration-300 ${step >= 1 ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                  <div className={`w-8 h-1.5 rounded-full transition-colors duration-300 ${step >= 2 ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                </div>
+                <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">Step {step} of 2</span>
+              </div>
             </div>
 
             {/* Method toggle */}
@@ -225,7 +243,7 @@ function SignupContent() {
                             placeholder="Min 8 characters"
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all pr-12"
                           />
-                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                           </button>
                         </div>
@@ -316,15 +334,15 @@ function SignupContent() {
                   <div className="flex-1 h-px bg-slate-200 dark:bg-gray-700" />
                 </div>
 
-                {/* Google sign-in — coming soon */}
-                <button disabled className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-slate-200 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 text-slate-400 dark:text-slate-500 font-medium cursor-not-allowed opacity-60">
+                {/* Google sign-in placeholder */}
+                <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-slate-50 dark:hover:bg-gray-600 text-slate-700 dark:text-slate-200 font-medium transition-all">
                   <svg viewBox="0 0 24 24" className="w-5 h-5">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                   </svg>
-                  Google Sign-in (Coming Soon)
+                  Continue with Google
                 </button>
               </>
             )}

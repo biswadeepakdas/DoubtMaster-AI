@@ -57,6 +57,29 @@ MATHEMATICS:
 - For word problems: Define variables first, set up equation,
   solve, then state the answer in words matching the question.
 
+LINEAR ALGEBRA (Class 11-12, JEE, College-level):
+- Matrices: Show the matrix clearly, perform row/column operations step by step.
+  For matrix multiplication: show the element-wise dot products explicitly.
+  Example: C[i][j] = sum of A[i][k] * B[k][j] for each element.
+- Determinants: Use cofactor expansion. Show the expansion formula first,
+  then substitute values, then compute each cofactor step by step.
+  For 3x3: Use Sarrus' rule or cofactor expansion along easiest row/column.
+  For higher order: Use row reduction to simplify before expanding.
+- Systems of Linear Equations: Show the augmented matrix, then perform
+  Gaussian elimination (row echelon form) or Cramer's Rule step by step.
+  Label each row operation clearly (e.g., R2 ← R2 - 3R1).
+  State whether the system is consistent, inconsistent, or has infinite solutions.
+- Eigenvalues & Eigenvectors: Write the characteristic equation det(A - λI) = 0,
+  expand the determinant, solve for λ, then for each eigenvalue find the
+  eigenvector by solving (A - λI)x = 0. Show null space computation.
+- Vector Spaces: Define the space, check axioms or properties as needed.
+  For basis/dimension: Show linear independence check via row reduction.
+- Matrix Inverse: Use augmented matrix [A|I] and row reduce to [I|A⁻¹],
+  showing each row operation. Alternatively use adjoint method for small matrices.
+- Rank: Row reduce to echelon form, count non-zero rows.
+- For all linear algebra: Use proper matrix notation with brackets,
+  show intermediate matrices after each operation, label operations clearly.
+
 SCIENCE (Physics / Chemistry / Biology):
 - Physics: Write formula → units → substitute → calculate.
   Always include SI units in every step. Box the final answer with units.
@@ -131,25 +154,27 @@ Classes 11–12 (Ages 16–17) — JEE/NEET PREP:
 ═══════════════════════════════════════════════════════════════
 
 {
-  "question_id": "Q1",
-  "solution_type": "step_by_step",
   "steps": [
     {
-      "step_number": 1,
+      "stepNumber": 1,
       "title": "Write the quadratic formula",
-      "work": "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$",
+      "content": "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$",
       "explanation": "We use this formula when we cannot factorise easily.",
-      "marks_for_step": 1
+      "concept": "Quadratic Formula",
+      "formula": "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$"
+    },
+    {
+      "stepNumber": 2,
+      "title": "Identify coefficients a, b, c",
+      "content": "From 2x² + 5x - 3 = 0: a = 2, b = 5, c = -3",
+      "explanation": "Compare with standard form ax² + bx + c = 0",
+      "concept": "Standard Form",
+      "formula": null
     }
   ],
-  "final_answer": "x = 1/2 or x = -3",
-  "final_answer_latex": "$x = \\frac{1}{2}$ or $x = -3$",
-  "formulas_used": ["Quadratic Formula"],
-  "diagram_needed": false,
-  "diagram_description": null,
-  "key_concepts": ["Quadratic Equations", "Discriminant"],
-  "difficulty": "medium",
-  "estimated_marks": 4,
-  "alternate_method": "Can also be solved by factorisation: (2x-1)(x+3)=0",
-  "ncert_reference": "Class 10 Math Ch.4 Exercise 4.3"
+  "finalAnswer": "x = 1/2 or x = -3",
+  "confidence": 0.95,
+  "conceptTags": ["Quadratic Equations", "Discriminant"],
+  "relatedPYQs": ["CBSE 2023 Q14", "JEE Main 2022 Q3"],
+  "alternativeMethod": "Can also be solved by factorisation: (2x-1)(x+3)=0"
 }

@@ -10,9 +10,10 @@ export class AppError extends Error {
 }
 
 export function notFoundHandler(req, res) {
+  // SECURITY: Do not echo the requested path back — prevents path enumeration and reflected content
   res.status(404).json({
     error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found`,
+    message: 'The requested resource was not found',
     code: 'NOT_FOUND',
   });
 }
@@ -27,6 +28,7 @@ export function errorHandler(err, req, res, _next) {
 
   res.status(statusCode).json({
     error: message,
+    message: message,
     code: err.code || 'INTERNAL_ERROR',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });

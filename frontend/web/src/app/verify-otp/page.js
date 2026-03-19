@@ -29,6 +29,7 @@ function VerifyOtpContent() {
   const [identifier, setIdentifier] = useState('');
   const [method, setMethod] = useState('phone');
   const inputRefs = useRef([]);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -100,19 +101,28 @@ function VerifyOtpContent() {
   };
 
   const verifyOtp = async (code) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setLoading(true);
     setError('');
     try {
-      const endpoint = action === 'signup' ? '/api/v1/auth/verify-signup' : '/api/v1/auth/verify-otp';
+      // signup uses /verify-signup (accepts {identifier, otp, method})
+      // login  uses /verify-otp   (accepts {phone, otp})
+      const isSignup = action === 'signup';
+      const endpoint = isSignup ? '/api/v1/auth/verify-signup' : '/api/v1/auth/verify-otp';
+      const payload = isSignup
+        ? { identifier, otp: code, method }
+        : { phone: identifier, otp: code };
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, otp: code, method }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Invalid OTP');
 
-      localStorage.setItem('dm-token', data.token);
+      const token = data.token || data.accessToken;
+      if (token) localStorage.setItem('dm-token', token);
       if (data.refreshToken) localStorage.setItem('dm-refresh-token', data.refreshToken);
       sessionStorage.removeItem('dm-otp-identifier');
       sessionStorage.removeItem('dm-otp-method');
@@ -125,6 +135,7 @@ function VerifyOtpContent() {
       inputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -162,7 +173,7 @@ function VerifyOtpContent() {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm">D</div>
           <span className="text-xl font-bold text-slate-900 dark:text-white">DoubtMaster <span className="text-teal-600 dark:text-teal-400">AI</span></span>
         </Link>
-        <button onClick={toggleDark} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        <button onClick={toggleDark} aria-label="Toggle dark mode" className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           {dark ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-slate-600" />}
         </button>
       </nav>
@@ -202,6 +213,8 @@ function VerifyOtpContent() {
                   value={digit}
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
+                  aria-label={`OTP digit ${index + 1}`}
+                  autoComplete="one-time-code"
                   className={`w-12 h-14 text-center text-xl font-bold rounded-xl border-2 transition-all outline-none ${
                     digit
                       ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300'

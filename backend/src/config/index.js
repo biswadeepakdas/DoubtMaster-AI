@@ -21,9 +21,24 @@ const config = {
   },
 
   jwt: {
-    secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    secret: (() => {
+      if (process.env.JWT_SECRET) {
+        // SECURITY: Reject weak secrets (must be at least 32 chars)
+        if (process.env.JWT_SECRET.length < 32) {
+          throw new Error('FATAL: JWT_SECRET must be at least 32 characters long');
+        }
+        return process.env.JWT_SECRET;
+      }
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('FATAL: JWT_SECRET environment variable is required in production');
+      }
+      // SECURITY: Loud warning for dev fallback secret
+      console.warn('\n⚠️  WARNING: Using insecure default JWT_SECRET. Set JWT_SECRET env var before deploying!\n');
+      return 'dev-secret-change-in-production';
+    })(),
+    // SECURITY: Access tokens should be short-lived (15 minutes default, not 7 days)
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 
   ai: {

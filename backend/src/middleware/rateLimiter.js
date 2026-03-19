@@ -7,9 +7,13 @@ import config from '../config/index.js';
 export const solveLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   max: (req) => {
-    if (!req.user) return 5; // Unauthenticated
-    if (req.user.plan === 'pro' || req.user.plan === 'champion') return config.rateLimit.proPerDay;
-    return config.rateLimit.freePerDay;
+    try {
+      if (!req.user) return 5; // Unauthenticated
+      if (req.user.plan === 'pro' || req.user.plan === 'champion') return config.rateLimit?.proPerDay ?? 100;
+      return config.rateLimit?.freePerDay ?? 5;
+    } catch {
+      return 5; // Safe fallback
+    }
   },
   keyGenerator: (req) => req.user?.id || req.ip,
   message: {
