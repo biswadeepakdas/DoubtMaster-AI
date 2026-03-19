@@ -516,7 +516,16 @@ export function buildSolverPrompt(classification, language) {
   const questionAsksDiagram = /diagram|draw|illustrate|sketch|flow\s*chart|label/i.test(classification._questionText || '');
   const shouldIncludeDiagram = diagramSubjects.includes(classification.subject) || questionAsksDiagram;
   const diagramInstruction = shouldIncludeDiagram
-    ? `\n\nDIAGRAM: You MUST include a "diagram" field in your JSON response with Mermaid.js flowchart code. Use "graph TD" for vertical flows or "graph LR" for horizontal. Label all nodes clearly. Style important nodes with colors. The diagram should visually represent the concept or process being explained.`
+    ? `\n\nDIAGRAM: You MUST include a "diagram" field in your JSON response with Mermaid.js flowchart code.
+Rules:
+- Start with "graph TD" (top-down) or "graph LR" (left-right)
+- Label nodes with descriptive text in brackets: A[Prophase] --> B[Metaphase]
+- Use arrow labels for relationships: A -->|pumps blood| B
+- DO NOT use "style" directives (e.g. style A fill:#f9f) — they cause syntax errors
+- DO NOT use "classDef" — keep it simple
+- Keep it clean: just nodes and arrows, no CSS
+- Example: "graph TD\\n  A[Right Atrium] -->|deoxygenated blood| B[Right Ventricle]\\n  B --> C[Lungs]\\n  C -->|oxygenated blood| D[Left Atrium]"
+- The diagram must visually represent the concept or process being explained.`
     : '';
 
   // Animation for visual subjects (math graphs, physics motion, biology processes, chemistry reactions)
