@@ -49,13 +49,24 @@ export function MathBlock({ text, className = '' }) {
  * Non-math text is HTML-escaped and returned as-is.
  */
 function renderMathInText(text) {
-  // If the entire text looks like a LaTeX environment, render it as display math
   const trimmed = text.trim();
+
+  // If the entire text looks like LaTeX (environment, or contains LaTeX commands without delimiters)
   if (/^\\begin\{/.test(trimmed) || /^\\\[/.test(trimmed)) {
     try {
       return katex.renderToString(trimmed, { displayMode: true, throwOnError: false, trust: true });
     } catch {
       return escapeHtml(text);
+    }
+  }
+
+  // If text contains LaTeX commands but no $ delimiters, it's likely unwrapped math
+  // Common patterns: \text{}, \frac{}, \cdot, \sqrt{}, \pm, \times, \div, \leq, \geq, \neq, \alpha, etc.
+  if (!text.includes('$') && /\\(?:text|frac|cdot|sqrt|pm|times|div|leq|geq|neq|alpha|beta|gamma|delta|theta|lambda|mu|sigma|pi|infty|sum|prod|int|lim|log|sin|cos|tan|vec|hat|bar|dot|ddot|mathbf|mathrm|mathbb|left|right|binom|tbinom)\b/.test(text)) {
+    try {
+      return katex.renderToString(trimmed, { displayMode: false, throwOnError: false, trust: true });
+    } catch {
+      // Fall through to normal parsing
     }
   }
 
