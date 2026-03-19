@@ -107,7 +107,7 @@ export default function DashboardPage() {
     try {
       const data = await apiFetch('/api/v1/questions/text-solve', {
         method: 'POST',
-        body: JSON.stringify({ question: questionText.trim(), language: 'en' }),
+        body: JSON.stringify({ textQuestion: questionText.trim(), language: 'en' }),
       });
       setSolution(data.solution || data);
       setQuestionText('');
