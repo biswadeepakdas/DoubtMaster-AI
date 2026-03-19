@@ -199,61 +199,47 @@ function classifyQuestion(text, hintSubject, hintGrade) {
 /**
  * Smart model routing based on subject, difficulty, language, and grade.
  *
- * Routing strategy:
- *   - Indian languages → Sarvam (best for 22 Indian languages)
- *   - Hard math/JEE/NEET/Olympiad → DeepSeek V3.2 (87.5% AIME, best reasoning)
- *   - Medium math/science → QwQ-32B (strong step-by-step math reasoning)
- *   - All other subjects (commerce, humanities, CS, English) → Qwen 3.5-122B (all-rounder)
- *   - Easy questions (Class 1-8) → Qwen 3.5-122B (capable enough, saves routing complexity)
- *   - Vision/OCR → Gemma 3 27B (handled separately in extractTextFromImage)
+ * Tested latency (real benchmarks):
+ *   - Groq Llama 3.3 70B: 0.7-3.2s — ALL subjects, Hindi works too
+ *   - Sarvam-M (NIM): 3-5s — Indian languages (Odia, Kannada, etc.)
+ *   - QwQ-32B (NIM): 15-25s — Hard math reasoning (fallback only)
+ *   - Gemma 3 27B (NIM): Vision/OCR only
+ *
+ * Routing:
+ *   - ALL subjects (primary) → Groq Llama 3.3 70B (~1-3s)
+ *   - Indian languages (non-Hindi) → Sarvam (Odia, Kannada, Tamil, etc.)
+ *   - Hindi → Groq (tested: works well for Hindi math)
+ *   - Hard math fallback → QwQ-32B on NIM (slower but stronger reasoning)
  */
 function selectModel(classification, language) {
-  const indianLanguages = ['hi', 'ta', 'te', 'kn', 'bn', 'mr', 'gu', 'ml', 'pa', 'od'];
-  const mathScienceSubjects = ['math', 'physics', 'chemistry'];
-  const isMathScience = mathScienceSubjects.includes(classification.subject);
-  const grade = parseInt(classification.grade, 10) || 10;
+  // Indian languages that Groq/Llama handles poorly → Sarvam
+  const sarvamLanguages = ['ta', 'te', 'kn', 'bn', 'mr', 'gu', 'ml', 'pa', 'od'];
 
-  // Indian languages → Sarvam (trained on 22 Indian languages)
-  if (indianLanguages.includes(language)) {
-    // For hard math in Indian languages, still use DeepSeek (better math) + translate later
-    if (isMathScience && classification.difficulty === 'hard') {
-      logger.info(`Route: Hard math in ${language} → DeepSeek V3.2 (will solve in English)`);
-      return MODELS.DEEPSEEK;
-    }
+  if (sarvamLanguages.includes(language)) {
     logger.info(`Route: Indian language (${language}) → Sarvam`);
     return MODELS.SARVAM;
   }
 
-  // Hard math/science (JEE, NEET, Olympiad, Class 11-12 advanced) → DeepSeek V3.2
-  if (isMathScience && (classification.difficulty === 'hard' || grade >= 11)) {
-    logger.info(`Route: Hard ${classification.subject} (grade ${grade}) → DeepSeek V3.2`);
-    return MODELS.DEEPSEEK;
-  }
-
-  // Medium math/science (Class 9-12) → QwQ-32B (excellent step-by-step reasoning)
-  if (isMathScience && classification.difficulty === 'medium') {
-    logger.info(`Route: Medium ${classification.subject} → QwQ-32B`);
-    return MODELS.QWQ;
-  }
-
-  // Everything else (easy math, biology, commerce, humanities, CS, English) → Qwen 3.5-122B
-  logger.info(`Route: ${classification.subject}/${classification.difficulty} → Qwen 3.5-122B`);
-  return MODELS.QWEN;
+  // Hindi works on Groq Llama — tested and confirmed
+  // Everything else (all subjects, all difficulties, English + Hindi) → Groq
+  logger.info(`Route: ${classification.subject}/${classification.difficulty} (${language || 'en'}) → Groq Llama 3.3 70B`);
+  return MODELS.GROQ;
 }
 
 /**
  * Get fallback model chain for retries.
- * Each model has a ranked list of alternatives to try on failure.
+ * Groq fails → QwQ (hard math) or Sarvam (Indian langs)
+ * QwQ fails → Groq → Sarvam
+ * Sarvam fails → Groq → QwQ
  */
 function getFallbackModels(primaryModel) {
   const fallbacks = {
-    [MODELS.DEEPSEEK]: [MODELS.QWQ, MODELS.QWEN, MODELS.SARVAM],
-    [MODELS.QWQ]: [MODELS.DEEPSEEK, MODELS.QWEN, MODELS.SARVAM],
-    [MODELS.QWEN]: [MODELS.QWQ, MODELS.DEEPSEEK, MODELS.SARVAM],
-    [MODELS.SARVAM]: [MODELS.QWEN, MODELS.QWQ, MODELS.DEEPSEEK],
-    [MODELS.GEMMA]: [MODELS.QWEN, MODELS.SARVAM],
+    [MODELS.GROQ]: [MODELS.QWQ, MODELS.SARVAM],
+    [MODELS.QWQ]: [MODELS.GROQ, MODELS.SARVAM],
+    [MODELS.SARVAM]: [MODELS.GROQ, MODELS.QWQ],
+    [MODELS.GEMMA]: [MODELS.GROQ, MODELS.SARVAM],
   };
-  return fallbacks[primaryModel] || [MODELS.QWEN, MODELS.SARVAM];
+  return fallbacks[primaryModel] || [MODELS.GROQ, MODELS.SARVAM];
 }
 
 /**
@@ -344,7 +330,7 @@ async function generateSolution(questionText, classification, language, model) {
       const rawText = await callLLM({
         systemPrompt: systemPrompt.replace('Return a JSON object', 'Provide a clear step-by-step solution in plain text').replace('Return your response as a valid JSON', 'Provide a clear step-by-step solution'),
         userPrompt: `<student_question>${questionText}</student_question>`,
-        model: MODELS.QWEN,
+        model: MODELS.GROQ,
         temperature: 0.5,
       });
 

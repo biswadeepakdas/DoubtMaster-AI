@@ -3,52 +3,72 @@ import config from '../config/index.js';
 import { logger } from '../utils/logger.js';
 
 /**
- * LLM Service — Multi-model support via NVIDIA NIM (OpenAI-compatible API)
+ * LLM Service — Multi-model support
  *
- * Model Routing:
- *   - sarvamai/sarvam-m       → Indian languages (Hindi, Odia, Kannada, etc.)
- *   - google/gemma-3-27b-it   → Vision/OCR (image → text extraction)
- *   - deepseek-ai/deepseek-v3-2  → Hard math, JEE/NEET, reasoning (87.5% AIME)
- *   - qwen/qwq-32b            → Math reasoning backup, step-by-step
- *   - qwen/qwen3.5-122b-a10b  → All-subjects workhorse (122B params)
+ * Model Routing (tested latency):
+ *   - Groq Llama 3.3 70B   → PRIMARY solver, all subjects (~1-3s, FREE)
+ *   - sarvamai/sarvam-m     → Indian languages via NVIDIA NIM (~3-5s)
+ *   - qwen/qwq-32b          → Hard math fallback via NVIDIA NIM (~15-25s, reasoning)
+ *   - google/gemma-3-27b-it  → Vision/OCR only via NVIDIA NIM
  */
 
 const NVIDIA_BASE_URL = config.ai.nvidia.baseUrl;
 
 // Model constants
-const SARVAM_MODEL = config.ai.nvidia.model;       // sarvamai/sarvam-m
-const GEMMA_MODEL = config.ai.gemma.model;          // google/gemma-3-27b-it
-const DEEPSEEK_MODEL = config.ai.deepseek.model;    // deepseek-ai/deepseek-v3-2
-const QWQ_MODEL = config.ai.qwq.model;              // qwen/qwq-32b
-const QWEN_MODEL = config.ai.qwen.model;            // qwen/qwen3.5-122b-a10b
+const GROQ_MODEL = config.ai.groq.model;            // llama-3.3-70b-versatile
+const SARVAM_MODEL = config.ai.nvidia.model;         // sarvamai/sarvam-m
+const QWQ_MODEL = config.ai.qwq.model;               // qwen/qwq-32b
+const GEMMA_MODEL = config.ai.gemma.model;            // google/gemma-3-27b-it
 
-// Lazy-initialized clients — avoid crash at import time if keys are missing
+// Lazy-initialized clients
 const _clients = {};
 
-function getClientFor(name, apiKeyGetter) {
-  if (!_clients[name]) {
-    const apiKey = apiKeyGetter();
-    if (!apiKey) throw new Error(`${name} API key is not configured. Set it in environment variables.`);
-    _clients[name] = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
+function getGroqClient() {
+  if (!_clients.groq) {
+    const apiKey = config.ai.groq.apiKey;
+    if (!apiKey) throw new Error('GROQ_API_KEY is not configured. Set it in environment variables.');
+    _clients.groq = new OpenAI({ baseURL: config.ai.groq.baseUrl, apiKey, timeout: 30000 });
   }
-  return _clients[name];
+  return _clients.groq;
 }
 
-function getSarvamClient() { return getClientFor('sarvam', () => config.ai.nvidia.apiKey); }
-function getGemmaClient() { return getClientFor('gemma', () => config.ai.gemma.apiKey); }
-function getDeepSeekClient() { return getClientFor('deepseek', () => config.ai.deepseek.apiKey); }
-function getQwqClient() { return getClientFor('qwq', () => config.ai.qwq.apiKey); }
-function getQwenClient() { return getClientFor('qwen', () => config.ai.qwen.apiKey); }
+function getSarvamClient() {
+  if (!_clients.sarvam) {
+    const apiKey = config.ai.nvidia.apiKey;
+    if (!apiKey) throw new Error('NVIDIA_API_KEY is not configured. Set it in environment variables.');
+    _clients.sarvam = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
+  }
+  return _clients.sarvam;
+}
+
+function getQwqClient() {
+  if (!_clients.qwq) {
+    const apiKey = config.ai.qwq.apiKey;
+    if (!apiKey) throw new Error('QWQ_NIM_API_KEY is not configured. Set it in environment variables.');
+    _clients.qwq = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
+  }
+  return _clients.qwq;
+}
+
+function getGemmaClient() {
+  if (!_clients.gemma) {
+    const apiKey = config.ai.gemma.apiKey;
+    if (!apiKey) throw new Error('GEMMA_API_KEY is not configured. Set it in environment variables.');
+    _clients.gemma = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
+  }
+  return _clients.gemma;
+}
 
 /**
  * Get the right client for a given model
  */
 function getClient(model) {
+  if (model === GROQ_MODEL) return getGroqClient();
   if (model === GEMMA_MODEL) return getGemmaClient();
-  if (model === DEEPSEEK_MODEL) return getDeepSeekClient();
   if (model === QWQ_MODEL) return getQwqClient();
-  if (model === QWEN_MODEL) return getQwenClient();
-  return getSarvamClient();
+  if (model === SARVAM_MODEL) return getSarvamClient();
+  // Default to Groq (fastest)
+  return getGroqClient();
 }
 
 /**
@@ -56,7 +76,7 @@ function getClient(model) {
  * Returns the assistant's text response.
  */
 export async function callLLM({ systemPrompt, userPrompt, model, temperature = 0.5, maxTokens = 16384, topP = 1 }) {
-  const selectedModel = model || SARVAM_MODEL;
+  const selectedModel = model || GROQ_MODEL;
   const client = getClient(selectedModel);
 
   logger.info(`LLM call: model=${selectedModel}, prompt length=${userPrompt.length}`);
@@ -86,7 +106,7 @@ export async function callLLM({ systemPrompt, userPrompt, model, temperature = 0
 export async function callLLMJson({ systemPrompt, userPrompt, model, temperature = 0.3, maxTokens = 16384 }) {
   const raw = await callLLM({ systemPrompt, userPrompt, model, temperature, maxTokens });
 
-  // Strip markdown code fences if present (handles ```json, ```, ```JSON, etc.)
+  // Strip markdown code fences if present
   let cleaned = raw.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json|JSON)?\s*\n?/, '').replace(/\n?```\s*$/, '');
@@ -156,10 +176,9 @@ export async function callVision({ imageBase64, prompt, mimeType = 'image/jpeg',
 
 /**
  * Stream LLM response for real-time UI updates.
- * Yields text chunks as they arrive.
  */
 export async function* streamLLM({ systemPrompt, userPrompt, model, temperature = 0.5, maxTokens = 16384 }) {
-  const selectedModel = model || SARVAM_MODEL;
+  const selectedModel = model || GROQ_MODEL;
   const client = getClient(selectedModel);
 
   const stream = await client.chat.completions.create({
@@ -182,9 +201,8 @@ export async function* streamLLM({ systemPrompt, userPrompt, model, temperature 
 
 /** Expose model constants for routing */
 export const MODELS = {
+  GROQ: GROQ_MODEL,
   SARVAM: SARVAM_MODEL,
-  GEMMA: GEMMA_MODEL,
-  DEEPSEEK: DEEPSEEK_MODEL,
   QWQ: QWQ_MODEL,
-  QWEN: QWEN_MODEL,
+  GEMMA: GEMMA_MODEL,
 };
