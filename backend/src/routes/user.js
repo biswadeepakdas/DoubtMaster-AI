@@ -77,36 +77,56 @@ router.get('/progress', authenticate, async (req, res, next) => {
       .gte('date', weekAgo.toISOString().split('T')[0])
       .order('date');
 
-    // Get subject breakdown from recent questions
-    const { data: recentQuestions } = await supabase.from('questions')
+    // Get subject breakdown from all questions for this user
+    const { data: allQuestions } = await supabase.from('questions')
       .select('subject')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100);
+      .eq('user_id', userId);
 
     const subjectCounts = {};
-    for (const q of recentQuestions || []) {
-      subjectCounts[q.subject] = (subjectCounts[q.subject] || 0) + 1;
+    for (const q of allQuestions || []) {
+      if (q.subject) {
+        subjectCounts[q.subject] = (subjectCounts[q.subject] || 0) + 1;
+      }
     }
 
     const totalSolved = user?.solve_count || 0;
-    const weeklyActivity = Array(7).fill(0);
+
+    // Build weekly activity: array of 7 entries for the last 7 days (index 0 = 6 days ago, index 6 = today)
+    const weeklyActivity = [];
+    const todayDate = new Date();
+    const weeklyMap = new Map();
     for (const day of weeklyData || []) {
-      const dayIndex = new Date(day.date).getDay();
-      weeklyActivity[dayIndex] = day.questions_solved;
+      weeklyMap.set(day.date, day.questions_solved);
     }
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(todayDate);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      weeklyActivity.push(weeklyMap.get(dateStr) || 0);
+    }
+
+    // Compute overall accuracy from all progress rows
+    const { data: allProgress } = await supabase.from('user_progress')
+      .select('questions_solved, correct_count')
+      .eq('user_id', userId);
+
+    let totalQuestions = 0;
+    let totalCorrect = 0;
+    for (const row of allProgress || []) {
+      totalQuestions += row.questions_solved || 0;
+      totalCorrect += row.correct_count || 0;
+    }
+    const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
 
     res.json({
       overall: {
         totalSolved,
-        accuracy: todayProgress?.correct_count && todayProgress?.questions_solved
-          ? Math.round((todayProgress.correct_count / todayProgress.questions_solved) * 100)
-          : 0,
+        accuracy,
         streak: user?.streak || 0,
         bestStreak: user?.best_streak || 0,
       },
       bySubject: subjectCounts,
-      weakTopics: todayProgress?.weak_topics || [],
+      weakTopics: [],
       dailyGoal: { target: 10, completed: todayProgress?.questions_solved || 0 },
       weeklyActivity,
     });

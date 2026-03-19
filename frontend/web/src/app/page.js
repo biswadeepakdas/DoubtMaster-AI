@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Camera, BookOpen, Brain, Globe, Smartphone, Target,
   BarChart3, School, IndianRupee, Sun, Moon, Menu,
-  ChevronRight, Star, Check, X, Zap, Shield,
-  MessageCircle, Users, Download, ArrowRight, Play,
+  ChevronRight, Check, X, Zap, Shield,
+  MessageCircle, Users, ArrowRight, Play,
   Sparkles, GraduationCap, Languages, Wifi, WifiOff,
   Heart, Twitter, Instagram, Youtube, Linkedin,
   Mail, Phone, MapPin
@@ -70,9 +70,6 @@ export default function LandingPage() {
   const [annual, setAnnual] = useState(true);
 
   // Counters
-  const [students, studentsRef] = useCounter(1000000, 2500);
-  const [questions, questionsRef] = useCounter(50000, 2000);
-  const [accuracy, accuracyRef] = useCounter(995, 2000);
   const [languages, languagesRef] = useCounter(11, 1500);
 
   // Section observers
@@ -115,7 +112,7 @@ export default function LandingPage() {
     { icon: BookOpen, title: 'NCERT Exact Match', desc: 'Solutions mapped exactly to NCERT textbooks. Chapter, exercise, question number -- all matched.', color: 'from-emerald-500 to-teal-500' },
     { icon: Languages, title: '11 Languages', desc: 'Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Malayalam, Punjabi, Odia + English.', color: 'from-blue-500 to-cyan-500' },
     { icon: Smartphone, title: 'Works on Any Phone', desc: 'Under 5 MB app. Works on 2GB RAM phones. Offline mode for exam week. Low-data friendly.', color: 'from-pink-500 to-rose-500' },
-    { icon: Target, title: 'JEE/NEET Deep Solve', desc: 'Trained on 50,000+ PYQs. Concept tagging, alternative methods, and accuracy above 98%.', color: 'from-teal-500 to-teal-500' },
+    { icon: Target, title: 'JEE/NEET Deep Solve', desc: 'NCERT + PYQ coverage. Concept tagging, alternative methods, and AI-powered accuracy.', color: 'from-teal-500 to-teal-500' },
     { icon: BarChart3, title: 'Smart Progress', desc: 'AI detects your weak topics. Daily streak, subject mastery, personalized practice.', color: 'from-cyan-500 to-blue-500' },
     { icon: School, title: 'Teacher Dashboard', desc: 'Schools get free analytics. See which students need help. Anti-cheating watermarks.', color: 'from-green-500 to-emerald-500' },
     { icon: IndianRupee, title: 'India-Priced', desc: "Free NCERT forever. Pro at just Rs.49/month. 25x cheaper than the competition. Real value.", color: 'from-amber-500 to-yellow-500' },
@@ -236,7 +233,7 @@ export default function LandingPage() {
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 px-4 py-2 rounded-full text-sm font-medium mb-6 animate-fade-in-up">
                 <GraduationCap size={16} />
-                <span>Trusted by 10 Lakh+ Indian Students</span>
+                <span>Designed for CBSE, ICSE &amp; State Boards</span>
               </div>
 
               <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 animate-fade-in-up delay-100 ${
@@ -271,7 +268,7 @@ export default function LandingPage() {
                   }`}
                 >
                   <Play size={20} />
-                  Watch Demo
+                  See How It Works
                 </a>
               </div>
 
@@ -334,7 +331,7 @@ export default function LandingPage() {
                 <div className={`absolute -top-4 -right-12 px-3 py-2 rounded-xl text-xs font-bold shadow-lg animate-float-slow ${
                   darkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
-                  <div className="flex items-center gap-1"><Check size={12} /> 99.5% Accurate</div>
+                  <div className="flex items-center gap-1"><Check size={12} /> AI-Powered</div>
                 </div>
                 <div className={`absolute -bottom-2 -left-16 px-3 py-2 rounded-xl text-xs font-bold shadow-lg animate-float-reverse ${
                   darkMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -356,20 +353,10 @@ export default function LandingPage() {
       <section className={`py-8 border-y ${darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-gray-50/80 border-gray-100'}`}>
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
-            {/* Student count */}
+            {/* Built for Indian students */}
             <div className="flex items-center gap-2">
               <Users size={18} className="text-teal-500" />
-              <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>10 Lakh+</span>
-              <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Students</span>
-            </div>
-            {/* Rating */}
-            <div className="flex items-center gap-1.5">
-              <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} size={16} className="text-amber-400 fill-amber-400" />
-                ))}
-              </div>
-              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>4.8/5 Rating</span>
+              <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Built for Indian Students</span>
             </div>
             {/* Boards */}
             <div className="flex items-center gap-2 flex-wrap justify-center">
@@ -391,22 +378,18 @@ export default function LandingPage() {
       {/* ========== ANIMATED STATS ========== */}
       <section className="bg-gradient-cta py-14 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-10" />
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 px-4 text-center relative z-10">
-          <div ref={studentsRef}>
-            <div className="text-3xl md:text-4xl font-extrabold text-white">{(students / 100000).toFixed(0)} Lakh+</div>
-            <div className="text-teal-200 text-sm mt-1">Happy Students</div>
+        <div className="max-w-5xl mx-auto grid grid-cols-3 gap-8 px-4 text-center relative z-10">
+          <div>
+            <div className="text-3xl md:text-4xl font-extrabold text-white">Growing Community</div>
+            <div className="text-teal-200 text-sm mt-1">of Indian Students</div>
           </div>
-          <div ref={accuracyRef}>
-            <div className="text-3xl md:text-4xl font-extrabold text-white">{(accuracy / 10).toFixed(1)}%</div>
-            <div className="text-teal-200 text-sm mt-1">Accuracy on NCERT</div>
+          <div>
+            <div className="text-3xl md:text-4xl font-extrabold text-white">AI-Powered</div>
+            <div className="text-teal-200 text-sm mt-1">Accuracy</div>
           </div>
           <div ref={languagesRef}>
             <div className="text-3xl md:text-4xl font-extrabold text-white">{languages}</div>
             <div className="text-teal-200 text-sm mt-1">Languages Supported</div>
-          </div>
-          <div ref={questionsRef}>
-            <div className="text-3xl md:text-4xl font-extrabold text-white">{(questions / 1000).toFixed(0)}K+</div>
-            <div className="text-teal-200 text-sm mt-1">PYQs Trained On</div>
           </div>
         </div>
       </section>
@@ -666,7 +649,7 @@ export default function LandingPage() {
             Start Solving in 30 Seconds
           </h2>
           <p className="text-teal-200 mb-8 text-lg">
-            Join 10 Lakh+ Indian students who study smarter with DoubtMaster AI.
+            Join Indian students who study smarter with DoubtMaster AI.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="/signup" className="group inline-flex items-center justify-center gap-2 bg-white text-teal-600 px-8 py-4 rounded-2xl text-lg font-bold hover:bg-gray-50 transition-all duration-300 hover:-translate-y-1 shadow-xl shadow-black/10">
@@ -674,8 +657,8 @@ export default function LandingPage() {
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </a>
             <a href="/signup" className="inline-flex items-center justify-center gap-2 bg-white/10 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-white/20 transition-all duration-300 hover:-translate-y-1 border border-white/20">
-              <Download size={20} />
-              Download App
+              <ArrowRight size={20} />
+              Get Started Free
             </a>
           </div>
         </div>
@@ -709,6 +692,7 @@ export default function LandingPage() {
                   <a
                     key={label}
                     href="#"
+                    title="Coming Soon"
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Follow us on ${label}`}
@@ -718,16 +702,9 @@ export default function LandingPage() {
                   </a>
                 ))}
               </div>
-              {/* App Store badges */}
-              <div className="flex gap-3 mt-6">
-                <div className="px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-center">
-                  <div className="text-[10px] text-gray-400">Download on the</div>
-                  <div className="text-sm font-bold text-white">App Store</div>
-                </div>
-                <div className="px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-center">
-                  <div className="text-[10px] text-gray-400">Get it on</div>
-                  <div className="text-sm font-bold text-white">Google Play</div>
-                </div>
+              {/* Mobile app status */}
+              <div className="mt-6">
+                <span className="text-sm text-gray-400 italic">Mobile app coming soon</span>
               </div>
             </div>
 
@@ -736,7 +713,7 @@ export default function LandingPage() {
               <div className="font-semibold text-white mb-4 text-sm">Product</div>
               <ul className="space-y-2.5 text-sm">
                 {['NCERT Solutions', 'JEE Preparation', 'NEET Preparation', 'Mock Tests', 'Learn Mode'].map((item) => (
-                  <li key={item}><a href="#" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                  <li key={item}><a href="#" title="Coming Soon" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
                 ))}
               </ul>
             </div>
@@ -744,7 +721,7 @@ export default function LandingPage() {
               <div className="font-semibold text-white mb-4 text-sm">Company</div>
               <ul className="space-y-2.5 text-sm">
                 {['About', 'Careers', 'Blog', 'Contact', 'Press'].map((item) => (
-                  <li key={item}><a href="#" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                  <li key={item}><a href="#" title="Coming Soon" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
                 ))}
               </ul>
             </div>
@@ -752,7 +729,7 @@ export default function LandingPage() {
               <div className="font-semibold text-white mb-4 text-sm">Legal</div>
               <ul className="space-y-2.5 text-sm">
                 {['Privacy Policy', 'Terms of Service', 'Refund Policy', 'Cookie Policy'].map((item) => (
-                  <li key={item}><a href="#" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                  <li key={item}><a href="#" title="Coming Soon" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
                 ))}
               </ul>
             </div>
