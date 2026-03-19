@@ -14,6 +14,7 @@ import api from '../../lib/api';
 import MathRenderer, { MathBlock } from '../../components/MathRenderer';
 import DiagramRenderer from '../../components/DiagramRenderer';
 import AnimationRenderer from '../../components/AnimationRenderer';
+import SolutionChat from '../../components/SolutionChat';
 
 /* -------------------------------------------------- */
 /* Subject badge color mapping                        */
@@ -823,6 +824,14 @@ export default function DashboardPage() {
                 <MathRenderer text={currentSolution.solution.alternativeMethod} />
               </div>
             )}
+
+            {/* Follow-up Chat */}
+            <SolutionChat
+              questionText={currentSolution.extractedText}
+              solution={currentSolution.solution}
+              subject={currentSolution.subject}
+              className="mt-4"
+            />
 
             {/* Solve another */}
             <button
