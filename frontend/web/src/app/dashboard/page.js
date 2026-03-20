@@ -488,7 +488,7 @@ export default function DashboardPage() {
                 { icon: Camera, label: 'Solve', active: false, action: () => { setSidebarOpen(false); document.getElementById('solve-card')?.scrollIntoView({ behavior: 'smooth' }); } },
                 { icon: BookMarked, label: 'My Questions', active: false, action: () => { setSidebarOpen(false); router.push('/questions'); } },
                 { icon: BarChart3, label: 'Progress', active: false, action: () => { setSidebarOpen(false); router.push('/progress'); } },
-                { icon: FileText, label: 'Mock Tests', active: false, action: () => showToast('Mock Tests coming soon!') },
+                { icon: FileText, label: 'Mock Tests', active: false, action: () => { setSidebarOpen(false); router.push('/mock-tests'); } },
                 { icon: Settings, label: 'Settings', active: false, action: () => { setSidebarOpen(false); router.push('/settings'); } },
               ].map(({ icon: Icon, label, active, action }) => (
                 <button
