@@ -586,38 +586,71 @@ TEXT & LABELS:
     fill(51, 65, 85); textSize(11); text(label, x+14, y-5);
 - Always show units in labels (m/s, N, cm, etc.)
 
+=== PHYSICS ACCURACY RULES (MANDATORY) ===
+- MUST use correct physics formulas: v = u + at, s = ut + 0.5*a*t^2, F = ma, E = 0.5*m*v^2, etc.
+- Define a SCALE variable to map real units to pixels (e.g., let SCALE = 5; // 1 meter = 5 pixels)
+- Show labeled axes with REAL UNITS (m, s, m/s, N, kg, J) — NEVER just pixel values
+- Display initial conditions as text on canvas (e.g., "u = 20 m/s, θ = 45°, g = 9.8 m/s²")
+- Show a live info box updating with real values: t(s), v(m/s), h(m), x(m) during animation
+- Draw vectors with correct direction and magnitude (velocity, acceleration, force)
+- NEVER use arbitrary pixel motion — ALL positions must be computed from physics equations
+
+=== MATH GRAPH RULES (MANDATORY) ===
+- Draw a proper coordinate grid with origin at a visible point
+- Label X and Y axes with numeric tick marks and variable names
+- Use correct mathematical functions (Math.sin, Math.pow, etc.) — not approximations
+- Mark key points: roots (where y=0), vertex/extrema, intercepts, asymptotes
+- For quadratics: show vertex, axis of symmetry, discriminant-based roots
+- For trig: show amplitude, period, phase shift as labeled markers
+
 SUBJECT-SPECIFIC RULES:
-- GRAPHS (math): Draw coordinate grid, label axes with values, plot function with thick teal line (strokeWeight(2.5)), show moving point on curve as filled circle
-- PHYSICS: Show velocity/force vectors as arrows (use triangle heads), trajectory as dotted trail (use point() in a loop), label forces with magnitudes
+- GRAPHS (math): Draw coordinate grid with numeric ticks, plot function with thick teal line (strokeWeight(2.5)), mark roots/vertex with filled circles and labels showing coordinates
+- PHYSICS: Use REAL formulas for ALL motion. Show velocity/force vectors as arrows with magnitude labels. Trajectory as dotted trail. Live info box with t, v, x, y in real units. SCALE factor for unit-to-pixel mapping.
 - BIOLOGY: Use soft organic shapes (ellipses with low-alpha fills), pastel colors (fill with alpha 80-120), label all structures
 - CHEMISTRY: Use circles for atoms with element labels inside, connecting lines for bonds, animate reaction progress
 
-EXAMPLE OF GOOD CODE:
-function setup() {
-  createCanvas(400, 350);
-  smooth();
-  frameRate(30);
-  textFont('sans-serif');
-}
+EXAMPLE OF GOOD PHYSICS CODE (projectile with real formulas):
+let u = 20; // initial velocity m/s
+let angle = 45; // degrees
+let g = 9.8; // gravity m/s^2
+let SCALE = 8; // pixels per meter
+let t = 0;
+let ox = 60, oy = 300; // origin on canvas
+function setup() { createCanvas(400, 350); smooth(); frameRate(30); textFont('sans-serif'); }
 function draw() {
   background(248, 250, 252);
-  // Title
   noStroke(); fill(51, 65, 85); textSize(13); textAlign(CENTER); text('Projectile Motion', 200, 22);
   // Grid
   stroke(226, 232, 240); strokeWeight(0.5);
-  for (let x = 50; x < 380; x += 30) line(x, 40, x, 310);
-  for (let y = 40; y < 310; y += 30) line(50, y, 380, y);
-  // Axes
-  stroke(100, 116, 139); strokeWeight(1.5); line(50, 310, 380, 310); line(50, 40, 50, 310);
-  // Animated point with trail
-  let t = (frameCount % 120) / 120;
-  let px = lerp(60, 370, t);
-  let py = 300 - 250 * 4 * t * (1 - t);
-  noStroke(); fill(13, 148, 136, 40); ellipse(px - 4, py + 2, 12);
+  for (let x = ox; x < 380; x += 30) line(x, 40, x, oy);
+  for (let y = 40; y < oy; y += 30) line(ox, y, 380, y);
+  // Axes with labels
+  stroke(100, 116, 139); strokeWeight(1.5); line(ox, oy, 380, oy); line(ox, 40, ox, oy);
+  noStroke(); fill(100, 116, 139); textSize(10); textAlign(CENTER);
+  text('x (m)', 220, oy + 15); textAlign(RIGHT); text('y (m)', ox - 5, 170);
+  // Real physics
+  let rad = angle * PI / 180;
+  let ux = u * cos(rad), uy = u * sin(rad);
+  t = (frameCount % 150) * 0.03;
+  let realX = ux * t;
+  let realY = uy * t - 0.5 * g * t * t;
+  if (realY < 0) { realY = 0; t = 0; }
+  let px = ox + realX * SCALE, py = oy - realY * SCALE;
+  // Trail
+  noStroke();
+  for (let i = 0; i < t; i += 0.05) {
+    let rx = ux * i, ry = uy * i - 0.5 * g * i * i;
+    if (ry >= 0) { fill(13, 148, 136, 30); ellipse(ox + rx * SCALE, oy - ry * SCALE, 4); }
+  }
+  // Ball
   fill(13, 148, 136); ellipse(px, py, 14);
-  // Label pill
-  fill(255, 255, 255, 220); rect(px + 10, py - 22, 70, 22, 8);
-  fill(51, 65, 85); noStroke(); textSize(11); textAlign(LEFT); text('h=' + (300 - py).toFixed(0) + 'px', px + 14, py - 7);
+  // Info box
+  fill(255, 255, 255, 230); rect(240, 45, 150, 70, 8);
+  fill(51, 65, 85); noStroke(); textSize(11); textAlign(LEFT);
+  text('t = ' + t.toFixed(2) + ' s', 250, 62);
+  text('x = ' + realX.toFixed(1) + ' m', 250, 78);
+  text('y = ' + realY.toFixed(1) + ' m', 250, 94);
+  text('v = ' + sqrt(ux*ux + pow(uy - g*t, 2)).toFixed(1) + ' m/s', 250, 110);
 }
 
 DO NOT generate ugly/default code. NEVER use background(220). NEVER use default gray colors. ALWAYS include grid, labels, smooth motion, and the teal/emerald palette.`
