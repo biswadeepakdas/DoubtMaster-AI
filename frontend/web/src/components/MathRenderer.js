@@ -95,7 +95,9 @@ function renderMathInText(text) {
       if (sIdx !== -1 && sIdx < matchIndex && !(remaining[sIdx + 1] === '$')) {
         const endIdx = remaining.indexOf('$', sIdx + 1);
         if (endIdx !== -1 && endIdx > sIdx + 1) {
-          match = { start: sIdx, end: endIdx + 1, latex: remaining.substring(sIdx + 1, endIdx), display: false };
+          const inlineLatex = remaining.substring(sIdx + 1, endIdx);
+          const hasBlockEnv = /\\begin\{/.test(inlineLatex);
+          match = { start: sIdx, end: endIdx + 1, latex: inlineLatex, display: hasBlockEnv };
           matchIndex = sIdx;
         }
       }

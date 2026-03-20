@@ -68,6 +68,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [annual, setAnnual] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Counters
   const [languages, languagesRef] = useCounter(11, 1500);
@@ -86,6 +87,8 @@ export default function LandingPage() {
         setDarkMode(true);
         document.documentElement.classList.add('dark');
       }
+      const token = localStorage.getItem('dm-token');
+      if (token) setIsLoggedIn(true);
     }
   }, []);
 
@@ -103,7 +106,7 @@ export default function LandingPage() {
     { href: '#features', label: 'Features' },
     { href: '#how-it-works', label: 'How It Works' },
     { href: '#pricing', label: 'Pricing' },
-    { href: '/login', label: 'Login' },
+    { href: isLoggedIn ? '/dashboard' : '/login', label: isLoggedIn ? 'Dashboard' : 'Login' },
   ];
 
   const features = [

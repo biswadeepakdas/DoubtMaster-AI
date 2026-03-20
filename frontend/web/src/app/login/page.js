@@ -23,6 +23,8 @@ export default function LoginPage() {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('dm-dark');
       if (saved === 'true') { setDark(true); document.documentElement.classList.add('dark'); }
+      const token = localStorage.getItem('dm-token');
+      if (token) { router.push('/dashboard'); return; }
     }
   }, []);
 
