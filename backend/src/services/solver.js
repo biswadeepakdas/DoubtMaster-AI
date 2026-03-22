@@ -21,19 +21,26 @@ CRITICAL RULES:
 2. Each step MUST show the actual mathematical work — not just describe what to do.
 3. The "content" field in each step must contain the ACTUAL equation, calculation, or derivation — NOT a description like "solve for x".
 4. The "finalAnswer" MUST contain the concrete answer (e.g., "x = 3, y = 7" not "the value of x and y").
+5. The "explanation" field MUST be DETAILED (3-5 sentences): explain WHY this step is done, give intuition/analogy, warn about common mistakes, and connect to the next step. Write as a patient tutor, not a textbook.
 
 EXAMPLE of GOOD step content: "2x + 6y = 108  ... (equation 1 multiplied by 2)"
 EXAMPLE of BAD step content: "Multiplying equation 1 by 2 to align coefficients"
 
+EXAMPLE of GOOD explanation: "We multiply equation 1 by 2 so that the coefficient of x matches equation 2 — this lets us eliminate x by subtracting. Think of it like balancing a see-saw: we need both sides to have the same weight (coefficient) before we can cancel. Common mistake: forgetting to multiply EVERY term in the equation, not just the x term."
+EXAMPLE of BAD explanation: "Multiply to align coefficients."
+
 Return a valid JSON object with these keys:
-- steps: array of { stepNumber: number, title: string, content: string, explanation: string, concept: string, formula: string|null }
-  - "content" = the actual math work shown (equations, substitutions, simplifications)
-  - "explanation" = why this step is done
+- steps: array of { stepNumber, title, content, explanation, concept, formula, commonMistake, tip }
+  - "content" = the actual math work (equations, substitutions, simplifications)
+  - "explanation" = DETAILED why + intuition + common mistakes (3-5 sentences, warm tutor tone)
+  - "commonMistake" = one common error students make at this step (string or null)
+  - "tip" = a helpful exam/study tip for this step (string or null)
 - finalAnswer: string (the concrete numeric/symbolic answer)
 - confidence: number between 0 and 1
 - conceptTags: array of strings
 - relatedPYQs: array of strings (optional)
-- alternativeMethod: string or null`;
+- alternativeMethod: string or null (if provided, show full working, not just a one-liner)
+- conceptSummary: string (2-3 sentence summary of the core concept for quick revision)`;
 }
 
 /**
@@ -290,6 +297,8 @@ async function generateSolution(questionText, classification, language, model) {
       explanation: sanitizeLLMOutput(step.explanation || ''),
       concept: sanitizeLLMOutput(step.concept || step.key_concept || ''),
       formula: step.formula ? sanitizeLLMOutput(step.formula) : null,
+      commonMistake: step.commonMistake || step.common_mistake ? sanitizeLLMOutput(step.commonMistake || step.common_mistake) : null,
+      tip: step.tip ? sanitizeLLMOutput(step.tip) : null,
     }));
 
     return {
@@ -299,6 +308,7 @@ async function generateSolution(questionText, classification, language, model) {
       conceptTags: parsed.conceptTags || parsed.key_concepts || [],
       relatedPYQs: parsed.relatedPYQs || parsed.related_pyqs || [],
       alternativeMethod: parsed.alternativeMethod || parsed.alternate_method || null,
+      conceptSummary: parsed.conceptSummary || parsed.concept_summary || null,
       diagram: parsed.diagram || null,
       animation: parsed.animation || null,
     };
@@ -325,6 +335,8 @@ async function generateSolution(questionText, classification, language, model) {
           explanation: sanitizeLLMOutput(step.explanation || ''),
           concept: sanitizeLLMOutput(step.concept || step.key_concept || ''),
           formula: step.formula ? sanitizeLLMOutput(step.formula) : null,
+          commonMistake: step.commonMistake || step.common_mistake ? sanitizeLLMOutput(step.commonMistake || step.common_mistake) : null,
+          tip: step.tip ? sanitizeLLMOutput(step.tip) : null,
         }));
 
         const fc = parseFloat(fallbackParsed.confidence);
@@ -335,6 +347,7 @@ async function generateSolution(questionText, classification, language, model) {
           conceptTags: fallbackParsed.conceptTags || fallbackParsed.key_concepts || [],
           relatedPYQs: fallbackParsed.relatedPYQs || fallbackParsed.related_pyqs || [],
           alternativeMethod: fallbackParsed.alternativeMethod || fallbackParsed.alternate_method || null,
+          conceptSummary: fallbackParsed.conceptSummary || fallbackParsed.concept_summary || null,
           diagram: fallbackParsed.diagram || null,
         };
       } catch (fallbackErr) {
@@ -488,7 +501,7 @@ function sanitizeLLMOutput(text) {
  * Generate cache key from question text using SHA-256 hash
  */
 // Cache version — increment to bust all stale cached results
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 
 function generateCacheKey(text) {
   const normalizedText = text.toLowerCase().replace(/\s+/g, ' ').trim();

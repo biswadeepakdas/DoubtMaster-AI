@@ -67,7 +67,7 @@ export default function LoginPage() {
       } else {
         // Email login: password auth
         if (!password) { setError('Please enter your password'); setLoading(false); return; }
-        if (password.length < 6) { setError('Password must be at least 6 characters'); setLoading(false); return; }
+        if (password.length < 8) { setError('Password must be at least 8 characters'); setLoading(false); return; }
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/v1/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
