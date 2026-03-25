@@ -487,8 +487,9 @@ export default function DashboardPage() {
                 { icon: Home, label: 'Dashboard', active: true, action: () => {} },
                 { icon: Camera, label: 'Solve', active: false, action: () => { setSidebarOpen(false); document.getElementById('solve-card')?.scrollIntoView({ behavior: 'smooth' }); } },
                 { icon: BookMarked, label: 'My Questions', active: false, action: () => { setSidebarOpen(false); router.push('/questions'); } },
-                { icon: BarChart3, label: 'Progress', active: false, action: () => { setSidebarOpen(false); router.push('/progress'); } },
-                { icon: FileText, label: 'Mock Tests', active: false, action: () => { setSidebarOpen(false); router.push('/mock-tests'); } },
+                // Hidden in animation-first wedge — uncomment post-validation
+                // { icon: BarChart3, label: 'Progress', active: false, action: () => { setSidebarOpen(false); router.push('/progress'); } },
+                // { icon: FileText, label: 'Mock Tests', active: false, action: () => { setSidebarOpen(false); router.push('/mock-tests'); } },
                 { icon: Settings, label: 'Settings', active: false, action: () => { setSidebarOpen(false); router.push('/settings'); } },
               ].map(({ icon: Icon, label, active, action }) => (
                 <button
@@ -701,9 +702,30 @@ export default function DashboardPage() {
                     </div>
                   )}
                   {step.explanation && (
-                    <p className={`ml-10 mt-2 text-xs italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <div className={`ml-10 mt-3 p-3 rounded-lg text-sm leading-relaxed ${
+                      darkMode ? 'bg-slate-600/30 text-gray-300' : 'bg-teal-50/50 text-gray-600'
+                    }`}>
+                      <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${darkMode ? 'text-teal-400' : 'text-teal-700'}`}>
+                        Why this step?
+                      </p>
                       <MathRenderer text={step.explanation} />
-                    </p>
+                    </div>
+                  )}
+                  {step.commonMistake && (
+                    <div className={`ml-10 mt-2 p-2.5 rounded-lg text-xs flex items-start gap-2 ${
+                      darkMode ? 'bg-amber-500/10 text-amber-300' : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                      <span><strong>Common mistake:</strong> {step.commonMistake}</span>
+                    </div>
+                  )}
+                  {step.tip && (
+                    <div className={`ml-10 mt-2 p-2.5 rounded-lg text-xs flex items-start gap-2 ${
+                      darkMode ? 'bg-indigo-500/10 text-indigo-300' : 'bg-indigo-50 text-indigo-700'
+                    }`}>
+                      <Sparkles size={14} className="shrink-0 mt-0.5" />
+                      <span><strong>Tip:</strong> {step.tip}</span>
+                    </div>
                   )}
                 </div>
               ))}
@@ -801,6 +823,23 @@ export default function DashboardPage() {
                 <div className={`text-lg font-bold ${darkMode ? 'text-emerald-300' : 'text-emerald-800'}`}>
                   <MathRenderer text={currentSolution.solution.finalAnswer} />
                 </div>
+              </div>
+            )}
+
+            {/* Concept Summary */}
+            {(showAllSteps || !currentSolution.solution?.learnModeRequired) && currentSolution.solution?.conceptSummary && (
+              <div className={`p-4 rounded-xl mb-4 ${
+                darkMode ? 'bg-indigo-500/10 border border-indigo-500/20' : 'bg-indigo-50 border border-indigo-100'
+              }`}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <BookOpen size={16} className={darkMode ? 'text-indigo-400' : 'text-indigo-600'} />
+                  <p className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-indigo-400' : 'text-indigo-700'}`}>
+                    Quick Revision
+                  </p>
+                </div>
+                <p className={`text-sm leading-relaxed ${darkMode ? 'text-indigo-300' : 'text-indigo-800'}`}>
+                  {currentSolution.solution.conceptSummary}
+                </p>
               </div>
             )}
 

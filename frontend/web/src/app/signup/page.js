@@ -85,7 +85,7 @@ function SignupContent() {
     if (!name.trim()) { setError('Please enter your name'); return; }
     if (!selectedClass) { setError('Please select your class'); return; }
     if (!selectedBoard) { setError('Please select your board'); return; }
-    if (method === 'email' && password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (method === 'email' && password.length < 8) { setError('Password must be at least 8 characters'); return; }
 
     setLoading(true);
     try {
