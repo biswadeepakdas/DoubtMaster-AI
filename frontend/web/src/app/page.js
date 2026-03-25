@@ -64,6 +64,9 @@ function useInView(threshold = 0.15) {
 /* -------------------------------------------------- */
 /* Main Landing Page                                   */
 /* -------------------------------------------------- */
+// Animation-first wedge: set to true to show stripped landing page
+const ANIMATION_WEDGE_MODE = true;
+
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -102,12 +105,14 @@ export default function LandingPage() {
     }
   }, [darkMode]);
 
-  const navLinks = [
-    { href: '#features', label: 'Features' },
-    { href: '#how-it-works', label: 'How It Works' },
-    { href: '#pricing', label: 'Pricing' },
-    { href: isLoggedIn ? '/dashboard' : '/login', label: isLoggedIn ? 'Dashboard' : 'Login' },
-  ];
+  const navLinks = ANIMATION_WEDGE_MODE
+    ? [{ href: isLoggedIn ? '/dashboard' : '/login', label: isLoggedIn ? 'Dashboard' : 'Login' }]
+    : [
+        { href: '#features', label: 'Features' },
+        { href: '#how-it-works', label: 'How It Works' },
+        { href: '#pricing', label: 'Pricing' },
+        { href: isLoggedIn ? '/dashboard' : '/login', label: isLoggedIn ? 'Dashboard' : 'Login' },
+      ];
 
   const features = [
     { icon: Camera, title: 'Photo Solve', desc: 'Snap any question -- printed or handwritten. Our AI reads Hindi, Tamil, Telugu and more.', color: 'from-teal-500 to-emerald-500' },
@@ -242,16 +247,20 @@ export default function LandingPage() {
               <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 animate-fade-in-up delay-100 ${
                 darkMode ? 'text-white' : 'text-gray-900'
               }`}>
-                Samjho, Sirf{' '}
-                <br className="hidden sm:block" />
-                <span className="gradient-text">Answer Mat Dekho</span>
+                {ANIMATION_WEDGE_MODE ? (
+                  <>See the Physics.{' '}<br className="hidden sm:block" /><span className="gradient-text">Don&#39;t Just Read It.</span></>
+                ) : (
+                  <>Samjho, Sirf{' '}<br className="hidden sm:block" /><span className="gradient-text">Answer Mat Dekho</span></>
+                )}
               </h1>
 
               <p className={`text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 mb-8 animate-fade-in-up delay-200 ${
                 darkMode ? 'text-gray-400' : 'text-gray-600'
               }`}>
-                India's smartest AI homework solver. Snap a photo, get step-by-step solutions for
-                NCERT, JEE, NEET -- in Hindi and 10 regional languages. Free forever for NCERT.
+                {ANIMATION_WEDGE_MODE
+                  ? 'Snap a physics or math problem. Get an interactive animation that lets you SEE the concept — projectile motion, optics, graphs — not just read the answer.'
+                  : 'India\'s smartest AI homework solver. Snap a photo, get step-by-step solutions for NCERT, JEE, NEET -- in Hindi and 10 regional languages. Free forever for NCERT.'
+                }
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-6 animate-fade-in-up delay-300">
@@ -259,9 +268,10 @@ export default function LandingPage() {
                   href="/signup"
                   className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:shadow-xl hover:shadow-teal-500/25 transition-all duration-300 hover:-translate-y-1 pulse-glow"
                 >
-                  Start Solving Free
+                  {ANIMATION_WEDGE_MODE ? 'Try It Free' : 'Start Solving Free'}
                   <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </a>
+                {!ANIMATION_WEDGE_MODE && (
                 <a
                   href="#how-it-works"
                   className={`inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 hover:-translate-y-1 border ${
@@ -273,6 +283,7 @@ export default function LandingPage() {
                   <Play size={20} />
                   See How It Works
                 </a>
+                )}
               </div>
 
               <p className={`text-sm animate-fade-in-up delay-400 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -378,6 +389,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ========== SECTIONS HIDDEN IN ANIMATION WEDGE MODE ========== */}
+      {!ANIMATION_WEDGE_MODE && <>
       {/* ========== ANIMATED STATS ========== */}
       <section className="bg-gradient-cta py-14 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-10" />
@@ -666,6 +679,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      </>}
+      {/* ========== END HIDDEN SECTIONS ========== */}
 
       {/* ========== FOOTER ========== */}
       <footer className={`py-16 px-4 ${darkMode ? 'bg-slate-950' : 'bg-gray-900'}`}>

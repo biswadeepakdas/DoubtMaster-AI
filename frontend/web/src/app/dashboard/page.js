@@ -487,8 +487,9 @@ export default function DashboardPage() {
                 { icon: Home, label: 'Dashboard', active: true, action: () => {} },
                 { icon: Camera, label: 'Solve', active: false, action: () => { setSidebarOpen(false); document.getElementById('solve-card')?.scrollIntoView({ behavior: 'smooth' }); } },
                 { icon: BookMarked, label: 'My Questions', active: false, action: () => { setSidebarOpen(false); router.push('/questions'); } },
-                { icon: BarChart3, label: 'Progress', active: false, action: () => { setSidebarOpen(false); router.push('/progress'); } },
-                { icon: FileText, label: 'Mock Tests', active: false, action: () => { setSidebarOpen(false); router.push('/mock-tests'); } },
+                // Hidden in animation-first wedge — uncomment post-validation
+                // { icon: BarChart3, label: 'Progress', active: false, action: () => { setSidebarOpen(false); router.push('/progress'); } },
+                // { icon: FileText, label: 'Mock Tests', active: false, action: () => { setSidebarOpen(false); router.push('/mock-tests'); } },
                 { icon: Settings, label: 'Settings', active: false, action: () => { setSidebarOpen(false); router.push('/settings'); } },
               ].map(({ icon: Icon, label, active, action }) => (
                 <button

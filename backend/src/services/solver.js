@@ -310,7 +310,7 @@ async function generateSolution(questionText, classification, language, model) {
       alternativeMethod: parsed.alternativeMethod || parsed.alternate_method || null,
       conceptSummary: parsed.conceptSummary || parsed.concept_summary || null,
       diagram: parsed.diagram || null,
-      animation: parsed.animation || null,
+      animation: validateAnimation(parsed.animation),
     };
   } catch (err) {
     logger.error(`LLM solve failed with ${model}: ${err.message}`);
@@ -379,6 +379,42 @@ async function generateSolution(questionText, classification, language, model) {
       throw new Error('Failed to generate solution. Please try again.');
     }
   }
+}
+
+/**
+ * Validate LLM-generated animation — return null if broken so frontend shows text-only fallback.
+ */
+function validateAnimation(animation) {
+  if (!animation || !animation.code) return null;
+
+  const code = typeof animation.code === 'string' ? animation.code : '';
+  if (!code.trim()) return null;
+
+  // Must have setup() and draw() for p5.js
+  if (!/function\s+setup\s*\(/.test(code) || !/function\s+draw\s*\(/.test(code)) {
+    logger.warn('Animation validation failed: missing setup() or draw()');
+    return null;
+  }
+
+  // Must have createCanvas
+  if (!/createCanvas\s*\(/.test(code)) {
+    logger.warn('Animation validation failed: missing createCanvas()');
+    return null;
+  }
+
+  // Check for obviously unbalanced braces (off by more than 1)
+  const opens = (code.match(/{/g) || []).length;
+  const closes = (code.match(/}/g) || []).length;
+  if (Math.abs(opens - closes) > 1) {
+    logger.warn(`Animation validation failed: unbalanced braces (${opens} open, ${closes} close)`);
+    return null;
+  }
+
+  return {
+    title: animation.title || 'Animation',
+    description: animation.description || '',
+    code,
+  };
 }
 
 /**

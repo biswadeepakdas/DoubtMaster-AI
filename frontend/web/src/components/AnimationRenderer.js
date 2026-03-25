@@ -197,7 +197,7 @@ export default function AnimationRenderer({ code, title, description, className 
           {/* Iframe with fade-in */}
           <iframe
             ref={iframeRef}
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-same-origin"
             className={`w-full border-0 bg-white dark:bg-white transition-opacity duration-500 ease-out ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
             style={{ height: '380px' }}
             title={title || 'Educational Animation'}
