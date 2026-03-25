@@ -250,19 +250,18 @@ function classifyQuestion(text, hintSubject, hintGrade) {
 }
 
 /**
- * Smart model routing based on subject, difficulty, language, and grade.
- *
- * Tested latency (real benchmarks):
- *   - Groq Llama 3.3 70B: 0.7-3.2s — ALL subjects, Hindi works too
- *   - Sarvam-M (NIM): 3-5s — Indian languages (Odia, Kannada, etc.)
- *   - QwQ-32B (NIM): 15-25s — Hard math reasoning (fallback only)
- *   - Gemma 3 27B (NIM): Vision/OCR only
+ * Smart model routing — all via NVIDIA NIM (single API key)
  *
  * Routing:
- *   - ALL subjects (primary) → Groq Llama 3.3 70B (~1-3s)
- *   - Indian languages (non-Hindi) → Sarvam (Odia, Kannada, Tamil, etc.)
- *   - Hindi → Groq (tested: works well for Hindi math)
- *   - Hard math fallback → QwQ-32B on NIM (slower but stronger reasoning)
+ *   - Math/Physics (hard) → DeepSeek-R1 (best reasoning, ~5-15s)
+ *   - ALL subjects (primary) → DeepSeek-R1 via NVIDIA NIM
+ *   - Indian languages (non-Hindi) → Sarvam-M (Odia, Kannada, Tamil, etc.)
+ *   - Hindi → DeepSeek-R1 (handles Hindi well)
+ *   - Hard math fallback → QwQ-32B (slower but strong reasoning)
+ *   - Vision/OCR → Nemotron VL 12B (reads images, handwriting)
+ *
+ * If GROQ_API_KEY is set, Groq Llama is used as primary (faster, ~1-3s).
+ * If not set, DeepSeek-R1 on NVIDIA NIM is used automatically.
  */
 function selectModel(classification, language) {
   // Indian languages that Groq/Llama handles poorly → Sarvam

@@ -3,72 +3,78 @@ import config from '../config/index.js';
 import { logger } from '../utils/logger.js';
 
 /**
- * LLM Service — Multi-model support
+ * LLM Service — All models via NVIDIA NIM (single API key)
  *
- * Model Routing (tested latency):
- *   - Groq Llama 3.3 70B   → PRIMARY solver, all subjects (~1-3s, FREE)
- *   - sarvamai/sarvam-m     → Indian languages via NVIDIA NIM (~3-5s)
- *   - qwen/qwq-32b          → Hard math fallback via NVIDIA NIM (~15-25s, reasoning)
- *   - google/gemma-3-27b-it  → Vision/OCR only via NVIDIA NIM
+ * Model Routing:
+ *   - deepseek-ai/deepseek-r1-0528   → PRIMARY solver, best at math/reasoning (~5-15s)
+ *   - nvidia/nemotron-3-super-120b    → General solver fallback (~3-8s)
+ *   - sarvamai/sarvam-m               → Indian languages (Tamil, Telugu, Odia, etc.)
+ *   - qwen/qwq-32b                    → Hard math reasoning fallback
+ *   - nvidia/nemotron-nano-12b-v2-vl  → Vision/OCR (reads images, handwriting)
+ *   - google/gemma-3-27b-it           → Vision/OCR fallback
  */
 
 const NVIDIA_BASE_URL = config.ai.nvidia.baseUrl;
 
-// Model constants
-const GROQ_MODEL = config.ai.groq.model;            // llama-3.3-70b-versatile
-const SARVAM_MODEL = config.ai.nvidia.model;         // sarvamai/sarvam-m
-const QWQ_MODEL = config.ai.qwq.model;               // qwen/qwq-32b
-const GEMMA_MODEL = config.ai.gemma.model;            // google/gemma-3-27b-it
+// All models accessed via single NVIDIA NIM API key
+const DEEPSEEK_MODEL = 'deepseek-ai/deepseek-r1-0528';
+const NEMOTRON_MODEL = 'nvidia/nemotron-3-super-120b-a12b';
+const SARVAM_MODEL = config.ai.nvidia.model;           // sarvamai/sarvam-m
+const QWQ_MODEL = config.ai.qwq.model;                  // qwen/qwq-32b
+const NEMOTRON_VL_MODEL = 'nvidia/nemotron-nano-12b-v2-vl';
+const GEMMA_MODEL = config.ai.gemma.model;               // google/gemma-3-27b-it
 
-// Lazy-initialized clients
-const _clients = {};
+// Legacy model constant for Groq (kept for backward compat in solver.js routing)
+const GROQ_MODEL = config.ai.groq.model;                // llama-3.3-70b-versatile
+
+// Single NVIDIA NIM client — one API key for everything
+let _nimClient = null;
+
+function getNimClient() {
+  if (!_nimClient) {
+    const apiKey = config.ai.nvidia.apiKey;
+    if (!apiKey) throw new Error('NVIDIA_API_KEY is not configured. Get a free key at https://build.nvidia.com/settings/api-keys');
+    _nimClient = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
+  }
+  return _nimClient;
+}
+
+// Groq client (optional — used only if GROQ_API_KEY is set)
+let _groqClient = null;
 
 function getGroqClient() {
-  if (!_clients.groq) {
+  if (!_groqClient) {
     const apiKey = config.ai.groq.apiKey;
-    if (!apiKey) throw new Error('GROQ_API_KEY is not configured. Set it in environment variables.');
-    _clients.groq = new OpenAI({ baseURL: config.ai.groq.baseUrl, apiKey, timeout: 30000 });
+    if (!apiKey) return null; // Not configured — fall through to NVIDIA
+    _groqClient = new OpenAI({ baseURL: config.ai.groq.baseUrl, apiKey, timeout: 30000 });
   }
-  return _clients.groq;
-}
-
-function getSarvamClient() {
-  if (!_clients.sarvam) {
-    const apiKey = config.ai.nvidia.apiKey;
-    if (!apiKey) throw new Error('NVIDIA_API_KEY is not configured. Set it in environment variables.');
-    _clients.sarvam = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
-  }
-  return _clients.sarvam;
-}
-
-function getQwqClient() {
-  if (!_clients.qwq) {
-    const apiKey = config.ai.qwq.apiKey;
-    if (!apiKey) throw new Error('QWQ_NIM_API_KEY is not configured. Set it in environment variables.');
-    _clients.qwq = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
-  }
-  return _clients.qwq;
-}
-
-function getGemmaClient() {
-  if (!_clients.gemma) {
-    const apiKey = config.ai.gemma.apiKey;
-    if (!apiKey) throw new Error('GEMMA_API_KEY is not configured. Set it in environment variables.');
-    _clients.gemma = new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey, timeout: 120000 });
-  }
-  return _clients.gemma;
+  return _groqClient;
 }
 
 /**
- * Get the right client for a given model
+ * Get the right client for a given model.
+ * Groq models use Groq client (if available), everything else uses NVIDIA NIM.
  */
 function getClient(model) {
-  if (model === GROQ_MODEL) return getGroqClient();
-  if (model === GEMMA_MODEL) return getGemmaClient();
-  if (model === QWQ_MODEL) return getQwqClient();
-  if (model === SARVAM_MODEL) return getSarvamClient();
-  // Default to Groq (fastest)
-  return getGroqClient();
+  if (model === GROQ_MODEL) {
+    const groq = getGroqClient();
+    if (groq) return groq;
+    // Groq not configured — use DeepSeek on NVIDIA NIM instead
+    logger.info('Groq not configured, routing to DeepSeek-R1 on NVIDIA NIM');
+    return getNimClient();
+  }
+  return getNimClient();
+}
+
+/**
+ * Resolve the actual model ID to use.
+ * If Groq is requested but not configured, swap to DeepSeek-R1.
+ */
+function resolveModel(model) {
+  if (model === GROQ_MODEL && !config.ai.groq.apiKey) {
+    return DEEPSEEK_MODEL;
+  }
+  return model;
 }
 
 /**
@@ -76,8 +82,8 @@ function getClient(model) {
  * Returns the assistant's text response.
  */
 export async function callLLM({ systemPrompt, userPrompt, model, temperature = 0.5, maxTokens = 16384, topP = 1 }) {
-  const selectedModel = model || GROQ_MODEL;
-  const client = getClient(selectedModel);
+  const selectedModel = resolveModel(model || GROQ_MODEL);
+  const client = getClient(model || GROQ_MODEL);
 
   logger.info(`LLM call: model=${selectedModel}, prompt length=${userPrompt.length}`);
 
@@ -101,13 +107,17 @@ export async function callLLM({ systemPrompt, userPrompt, model, temperature = 0
 
 /**
  * Call the LLM and parse the response as JSON.
- * Handles markdown code fences that models sometimes wrap JSON in.
+ * Handles markdown code fences and <think> blocks that reasoning models wrap output in.
  */
 export async function callLLMJson({ systemPrompt, userPrompt, model, temperature = 0.3, maxTokens = 16384 }) {
   const raw = await callLLM({ systemPrompt, userPrompt, model, temperature, maxTokens });
 
   // Strip markdown code fences if present
   let cleaned = raw.trim();
+
+  // DeepSeek-R1 wraps reasoning in <think>...</think> blocks — strip them
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json|JSON)?\s*\n?/, '').replace(/\n?```\s*$/, '');
   }
@@ -141,15 +151,16 @@ export async function callLLMJson({ systemPrompt, userPrompt, model, temperature
 }
 
 /**
- * Call Gemma 3 27B with a vision/multimodal message (image + text).
- * Used for OCR — extracting questions from homework photos.
+ * Call a vision model with image + text.
+ * Primary: Nemotron VL (NVIDIA NIM). Fallback: Gemma 3 27B.
  */
-export async function callVision({ imageBase64, prompt, mimeType = 'image/jpeg', maxTokens = 4096 }) {
-  logger.info(`Vision call: Gemma 3 27B, image size=${imageBase64.length} chars`);
+export async function callVision({ imageBase64, prompt, mimeType = 'image/jpeg', maxTokens = 4096, model }) {
+  const visionModel = model === 'fallback' ? GEMMA_MODEL : NEMOTRON_VL_MODEL;
+  logger.info(`Vision call: ${visionModel}, image size=${imageBase64.length} chars`);
 
-  const client = getGemmaClient();
+  const client = getNimClient();
   const response = await client.chat.completions.create({
-    model: GEMMA_MODEL,
+    model: visionModel,
     messages: [
       {
         role: 'user',
@@ -168,7 +179,7 @@ export async function callVision({ imageBase64, prompt, mimeType = 'image/jpeg',
   });
 
   const text = response.choices[0]?.message?.content;
-  if (!text) throw new Error('Empty vision response from Gemma');
+  if (!text) throw new Error(`Empty vision response from ${visionModel}`);
 
   logger.info(`Vision response: ${text.length} chars`);
   return text;
@@ -178,8 +189,8 @@ export async function callVision({ imageBase64, prompt, mimeType = 'image/jpeg',
  * Stream LLM response for real-time UI updates.
  */
 export async function* streamLLM({ systemPrompt, userPrompt, model, temperature = 0.5, maxTokens = 16384 }) {
-  const selectedModel = model || GROQ_MODEL;
-  const client = getClient(selectedModel);
+  const selectedModel = resolveModel(model || GROQ_MODEL);
+  const client = getClient(model || GROQ_MODEL);
 
   const stream = await client.chat.completions.create({
     model: selectedModel,
@@ -201,8 +212,11 @@ export async function* streamLLM({ systemPrompt, userPrompt, model, temperature 
 
 /** Expose model constants for routing */
 export const MODELS = {
-  GROQ: GROQ_MODEL,
+  GROQ: GROQ_MODEL,       // Will auto-resolve to DeepSeek if Groq not configured
+  DEEPSEEK: DEEPSEEK_MODEL,
+  NEMOTRON: NEMOTRON_MODEL,
   SARVAM: SARVAM_MODEL,
   QWQ: QWQ_MODEL,
   GEMMA: GEMMA_MODEL,
+  NEMOTRON_VL: NEMOTRON_VL_MODEL,
 };
