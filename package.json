@@ -1,0 +1,12 @@
+{
+  "name": "doubtmaster-ai",
+  "private": true,
+  "scripts": {
+    "start": "cd backend && npm start",
+    "install": "cd backend && npm install",
+    "build": "echo 'No build step required'"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
