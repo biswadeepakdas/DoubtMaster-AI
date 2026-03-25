@@ -36,7 +36,12 @@ app.use(cors({
       ? corsOrigin.split(',').map(s => s.trim())
       : config.isDev
         ? ['http://localhost:3000', 'http://localhost:8081']
-        : ['https://doubtmaster.ai', 'https://app.doubtmaster.ai'],
+        : [
+            'https://doubtmaster.ai',
+            'https://app.doubtmaster.ai',
+            'https://doubt-master-ai.vercel.app',
+            'https://www.doubtmaster.ai',
+          ],
   credentials: true,
 }));
 
