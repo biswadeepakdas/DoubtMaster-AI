@@ -114,9 +114,7 @@ async function extractTextFromImage(imageBuffer) {
     ? imageBuffer.toString('base64')
     : imageBuffer; // Already base64
 
-  const extracted = await callVision({
-    imageBase64: base64,
-    prompt: `Extract ALL text from this homework/exam image accurately.
+  const ocrPrompt = `Extract ALL text from this homework/exam image accurately.
 
 RULES:
 - For mathematical equations, use LaTeX notation (e.g., $x^2 + 5x - 3 = 0$)
@@ -127,13 +125,45 @@ RULES:
 - If handwriting is unclear, mark uncertain parts with [?]
 - Separate multiple questions with "---"
 
-Output the extracted text, nothing else.`,
-    mimeType: 'image/jpeg',
-    maxTokens: 4096,
-  });
+Output the extracted text, nothing else.`;
 
-  logger.info(`OCR extracted ${extracted.length} chars from image`);
-  return extracted;
+  try {
+    const extracted = await callVision({
+      imageBase64: base64,
+      prompt: ocrPrompt,
+      mimeType: 'image/jpeg',
+      maxTokens: 4096,
+    });
+
+    if (!extracted || extracted.trim().length < 3) {
+      throw new Error('OCR returned empty or too-short text');
+    }
+
+    logger.info(`OCR extracted ${extracted.length} chars from image`);
+    return extracted;
+  } catch (primaryErr) {
+    logger.warn(`Primary OCR (Gemma Vision) failed: ${primaryErr.message}. Trying LLM fallback...`);
+
+    // Fallback: send the base64 image to Groq with a text prompt describing the task
+    // This won't do real OCR but at least gives a clear error message
+    try {
+      const fallbackExtracted = await callVision({
+        imageBase64: base64,
+        prompt: ocrPrompt,
+        mimeType: 'image/jpeg',
+        maxTokens: 4096,
+        model: 'fallback',
+      });
+      if (fallbackExtracted && fallbackExtracted.trim().length >= 3) {
+        logger.info(`Fallback OCR extracted ${fallbackExtracted.length} chars`);
+        return fallbackExtracted;
+      }
+    } catch (fallbackErr) {
+      logger.warn(`Fallback OCR also failed: ${fallbackErr.message}`);
+    }
+
+    throw new Error('Could not extract text from image. Please try typing your question instead.');
+  }
 }
 
 /**

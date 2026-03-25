@@ -220,7 +220,12 @@ export default function DashboardPage() {
       }
       setIsSolving(true);
       try {
-        const data = await api.post('/api/v1/questions/text-solve', { textQuestion: textQuestion.trim() });
+        const data = await api.post('/api/v1/questions/text-solve', {
+          textQuestion: textQuestion.trim(),
+          class: user?.class || undefined,
+          board: user?.board || 'CBSE',
+          language: 'en',
+        });
         setCurrentSolution(data);
         // Refresh dashboard data to reflect the new question
         fetchDashboardData();
@@ -238,6 +243,10 @@ export default function DashboardPage() {
       try {
         const formData = new FormData();
         formData.append('image', selectedFile);
+        // Send metadata so backend can classify correctly
+        if (user?.class) formData.append('class', String(user.class));
+        if (user?.board) formData.append('board', user.board);
+        formData.append('language', 'en');
         const token = localStorage.getItem('dm-token');
         const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         const res = await fetch(`${BASE_URL}/api/v1/questions/solve`, {
@@ -585,6 +594,7 @@ export default function DashboardPage() {
                     id="photo-upload"
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/heic"
+                    capture="environment"
                     className="hidden"
                     onChange={(e) => { setSelectedFile(e.target.files?.[0] || null); setSolveError(''); }}
                   />
