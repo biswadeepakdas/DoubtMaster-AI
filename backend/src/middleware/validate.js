@@ -37,11 +37,11 @@ export const schemas = {
   }),
 
   solveQuestion: z.object({
-    subject: z.enum(['math', 'physics', 'chemistry', 'biology', 'english', 'hindi', 'social_science']).optional(),
-    class: z.number().int().min(6).max(12).optional(),
+    subject: z.enum(['math', 'physics', 'chemistry', 'biology', 'english', 'hindi', 'social_science', 'economics', 'accounts', 'business', 'cs', 'general']).optional(),
+    class: z.coerce.number().int().min(6).max(12).optional(),
     board: z.string().optional(),
     language: z.string().default('en'),
-    textQuestion: z.string().max(2000).optional(),
+    textQuestion: z.string().max(5000).optional(),
   }),
 
   learnModeResponse: z.object({
