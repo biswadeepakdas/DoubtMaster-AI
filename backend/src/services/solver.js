@@ -75,7 +75,7 @@ export async function solveQuestion({ id, userId, image, textQuestion, subject, 
   const classification = classifyQuestion(questionText, subject, grade);
   classification.board = board || 'CBSE';
 
-  // Select model: Sarvam for Indian languages, Gemma for English/fallback
+  // Select model: Sarvam for Indian languages, DeepSeek-R1 for everything else
   const solveModel = selectModel(classification, language);
 
   // Generate solution (use sanitized text for LLM)
@@ -378,6 +378,7 @@ async function generateSolution(questionText, classification, language, model) {
           alternativeMethod: fallbackParsed.alternativeMethod || fallbackParsed.alternate_method || null,
           conceptSummary: fallbackParsed.conceptSummary || fallbackParsed.concept_summary || null,
           diagram: fallbackParsed.diagram || null,
+          animation: validateAnimation(fallbackParsed.animation),
         };
       } catch (fallbackErr) {
         logger.warn(`Fallback ${fallbackModel} also failed: ${fallbackErr.message}`);
@@ -402,6 +403,9 @@ async function generateSolution(questionText, classification, language, model) {
         conceptTags: [classification.subject, classification.topic],
         relatedPYQs: [],
         alternativeMethod: null,
+        conceptSummary: null,
+        diagram: null,
+        animation: null,
       };
     } catch (lastErr) {
       logger.error(`All LLM attempts failed: ${lastErr.message}`);

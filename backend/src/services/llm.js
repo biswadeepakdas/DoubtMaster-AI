@@ -83,7 +83,7 @@ function resolveModel(model) {
  */
 export async function callLLM({ systemPrompt, userPrompt, model, temperature = 0.5, maxTokens = 16384, topP = 1 }) {
   const selectedModel = resolveModel(model || GROQ_MODEL);
-  const client = getClient(model || GROQ_MODEL);
+  const client = getClient(selectedModel);
 
   logger.info(`LLM call: model=${selectedModel}, prompt length=${userPrompt.length}`);
 
@@ -190,7 +190,7 @@ export async function callVision({ imageBase64, prompt, mimeType = 'image/jpeg',
  */
 export async function* streamLLM({ systemPrompt, userPrompt, model, temperature = 0.5, maxTokens = 16384 }) {
   const selectedModel = resolveModel(model || GROQ_MODEL);
-  const client = getClient(model || GROQ_MODEL);
+  const client = getClient(selectedModel);
 
   const stream = await client.chat.completions.create({
     model: selectedModel,

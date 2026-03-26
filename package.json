@@ -2,9 +2,8 @@
   "name": "doubtmaster-ai",
   "private": true,
   "scripts": {
-    "start": "cd backend && npm start",
-    "install": "cd backend && npm install",
-    "build": "echo 'No build step required'"
+    "start": "node backend/src/server.js",
+    "install:backend": "cd backend && npm install"
   },
   "engines": {
     "node": ">=20.0.0"
