@@ -11,7 +11,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from app.core.config import settings
-from app.core.database import engine
+from app.core.database import engine, init_db
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.security import SecurityMiddleware
 
@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting Doubtmaster API", extra={"env": settings.ENVIRONMENT})
+    logger.info("Starting Doubtmaster API — initialising database tables...")
+    await init_db()
+    logger.info("Database ready. Doubtmaster API is up.", extra={"env": settings.ENVIRONMENT})
     yield
     await engine.dispose()
     logger.info("Doubtmaster API shut down cleanly")
