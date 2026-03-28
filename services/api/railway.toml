@@ -5,7 +5,7 @@ dockerfilePath = "Dockerfile"
 [deploy]
 # Single worker — Railway scales horizontally across containers.
 # Running multiple workers per container doubles memory and can cause port conflicts.
-startCommand          = "alembic upgrade head 2>/dev/null; uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"
+startCommand          = "(alembic upgrade head || true) && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"
 restartPolicyType     = "ON_FAILURE"
 restartPolicyMaxRetries = 5
 healthcheckPath       = "/health"
