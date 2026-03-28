@@ -1,0 +1,7 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+# No public port — internal Railway networking only.
+# Other Railway services reach this via http://openmaic.railway.internal:3000
+startCommand = "pnpm build && pnpm start"

@@ -64,8 +64,8 @@ function useInView(threshold = 0.15) {
 /* -------------------------------------------------- */
 /* Main Landing Page                                   */
 /* -------------------------------------------------- */
-// Animation-first wedge: set to true to show stripped landing page
-const ANIMATION_WEDGE_MODE = true;
+// Keep full landing page visible for clearer product communication.
+const ANIMATION_WEDGE_MODE = false;
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -229,12 +229,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ========== HERO ========== */}
-      <section className="relative pt-28 pb-20 px-4 overflow-hidden bg-gradient-hero bg-grid">
-        {/* Animated orbs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-400/20 rounded-full blur-3xl animate-orb pointer-events-none" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-400/15 rounded-full blur-3xl animate-orb-delayed pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl animate-orb pointer-events-none" />
-
+      <section className="relative pt-28 pb-20 px-4 overflow-hidden bg-gradient-hero">
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left text */}
@@ -266,7 +261,7 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-6 animate-fade-in-up delay-300">
                 <a
                   href="/signup"
-                  className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:shadow-xl hover:shadow-teal-500/25 transition-all duration-300 hover:-translate-y-1 pulse-glow"
+                  className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:shadow-xl hover:shadow-teal-500/25 transition-all duration-300 hover:-translate-y-1"
                 >
                   {ANIMATION_WEDGE_MODE ? 'Try It Free' : 'Start Solving Free'}
                   <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -342,17 +337,17 @@ export default function LandingPage() {
                 </div>
 
                 {/* Floating badges around phone */}
-                <div className={`absolute -top-4 -right-12 px-3 py-2 rounded-xl text-xs font-bold shadow-lg animate-float-slow ${
+                <div className={`absolute -top-4 -right-12 px-3 py-2 rounded-xl text-xs font-bold shadow-lg ${
                   darkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
                   <div className="flex items-center gap-1"><Check size={12} /> AI-Powered</div>
                 </div>
-                <div className={`absolute -bottom-2 -left-16 px-3 py-2 rounded-xl text-xs font-bold shadow-lg animate-float-reverse ${
+                <div className={`absolute -bottom-2 -left-16 px-3 py-2 rounded-xl text-xs font-bold shadow-lg ${
                   darkMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200'
                 }`}>
                   <div className="flex items-center gap-1"><Zap size={12} /> Under 3 sec</div>
                 </div>
-                <div className={`absolute top-1/2 -right-20 px-3 py-2 rounded-xl text-xs font-bold shadow-lg animate-float ${
+                <div className={`absolute top-1/2 -right-20 px-3 py-2 rounded-xl text-xs font-bold shadow-lg ${
                   darkMode ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'bg-teal-50 text-teal-700 border border-teal-200'
                 }`}>
                   <div className="flex items-center gap-1"><Globe size={12} /> 11 Languages</div>
@@ -433,8 +428,10 @@ export default function LandingPage() {
                   }`}
                   style={{ animationDelay: `${i * 0.08}s` }}
                 >
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    <Icon size={22} className="text-white" />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 ${
+                    darkMode ? 'bg-slate-700 text-teal-300' : 'bg-teal-50 text-teal-700'
+                  }`}>
+                    <Icon size={22} />
                   </div>
                   <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {feature.title}
@@ -654,11 +651,6 @@ export default function LandingPage() {
 
       {/* ========== CTA ========== */}
       <section className="py-20 px-4 bg-gradient-cta relative overflow-hidden" ref={ctaRef}>
-        {/* Floating decorative elements */}
-        <div className="absolute top-8 left-[10%] w-20 h-20 border border-white/10 rounded-2xl animate-float-slow rotate-12" />
-        <div className="absolute bottom-12 right-[15%] w-16 h-16 border border-white/10 rounded-full animate-float-reverse" />
-        <div className="absolute top-1/2 left-[5%] w-8 h-8 bg-white/5 rounded-lg animate-float rotate-45" />
-        <div className="absolute top-12 right-[8%] w-12 h-12 bg-white/5 rounded-xl animate-float-slow -rotate-12" />
 
         <div className={`max-w-3xl mx-auto text-center relative z-10 ${ctaInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -703,15 +695,14 @@ export default function LandingPage() {
               {/* Social icons */}
               <div className="flex gap-3">
                 {[
-                  { Icon: Twitter, label: 'Twitter' },
-                  { Icon: Instagram, label: 'Instagram' },
-                  { Icon: Youtube, label: 'YouTube' },
-                  { Icon: Linkedin, label: 'LinkedIn' },
-                ].map(({ Icon, label }) => (
+                  { Icon: Twitter, label: 'Twitter', href: 'https://twitter.com' },
+                  { Icon: Instagram, label: 'Instagram', href: 'https://instagram.com' },
+                  { Icon: Youtube, label: 'YouTube', href: 'https://youtube.com' },
+                  { Icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com' },
+                ].map(({ Icon, label, href }) => (
                   <a
                     key={label}
-                    href="#"
-                    title="Coming Soon"
+                    href={href}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Follow us on ${label}`}
@@ -731,24 +722,41 @@ export default function LandingPage() {
             <div>
               <div className="font-semibold text-white mb-4 text-sm">Product</div>
               <ul className="space-y-2.5 text-sm">
-                {['NCERT Solutions', 'JEE Preparation', 'NEET Preparation', 'Mock Tests', 'Learn Mode'].map((item) => (
-                  <li key={item}><a href="#" title="Coming Soon" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                {[
+                  { label: 'NCERT Solutions', href: '/questions' },
+                  { label: 'JEE Preparation', href: '/questions' },
+                  { label: 'NEET Preparation', href: '/questions' },
+                  { label: 'Mock Tests', href: '/mock-tests' },
+                  { label: 'Learn Mode', href: '/dashboard' },
+                ].map((item) => (
+                  <li key={item.label}><a href={item.href} className="text-gray-400 hover:text-teal-400 transition-colors">{item.label}</a></li>
                 ))}
               </ul>
             </div>
             <div>
               <div className="font-semibold text-white mb-4 text-sm">Company</div>
               <ul className="space-y-2.5 text-sm">
-                {['About', 'Careers', 'Blog', 'Contact', 'Press'].map((item) => (
-                  <li key={item}><a href="#" title="Coming Soon" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                {[
+                  { label: 'About', href: '/' },
+                  { label: 'Careers', href: '/' },
+                  { label: 'Blog', href: '/' },
+                  { label: 'Contact', href: 'mailto:support@doubtmaster.ai' },
+                  { label: 'Press', href: '/' },
+                ].map((item) => (
+                  <li key={item.label}><a href={item.href} className="text-gray-400 hover:text-teal-400 transition-colors">{item.label}</a></li>
                 ))}
               </ul>
             </div>
             <div>
               <div className="font-semibold text-white mb-4 text-sm">Legal</div>
               <ul className="space-y-2.5 text-sm">
-                {['Privacy Policy', 'Terms of Service', 'Refund Policy', 'Cookie Policy'].map((item) => (
-                  <li key={item}><a href="#" title="Coming Soon" className="text-gray-400 hover:text-teal-400 transition-colors">{item}</a></li>
+                {[
+                  { label: 'Privacy Policy', href: '/settings' },
+                  { label: 'Terms of Service', href: '/settings' },
+                  { label: 'Refund Policy', href: '/settings' },
+                  { label: 'Cookie Policy', href: '/settings' },
+                ].map((item) => (
+                  <li key={item.label}><a href={item.href} className="text-gray-400 hover:text-teal-400 transition-colors">{item.label}</a></li>
                 ))}
               </ul>
             </div>

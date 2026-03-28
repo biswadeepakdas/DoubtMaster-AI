@@ -448,7 +448,7 @@ export default function DashboardPage() {
             <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${
               darkMode ? 'bg-orange-500/10' : 'bg-orange-50'
             }`}>
-              <Flame size={16} className="text-orange-500 animate-flicker" />
+              <Flame size={16} className="text-orange-500" />
               <span className={`text-sm font-bold ${darkMode ? 'text-orange-300' : 'text-orange-600'}`}>{streak}</span>
             </div>
 
@@ -536,7 +536,7 @@ export default function DashboardPage() {
         {/* Welcome + Quick Solve */}
         <div className="mb-8 animate-fade-in-up">
           <h1 className={`text-2xl sm:text-3xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Namaste, {userName.split(' ')[0]}! <span className="inline-block animate-float text-2xl">&#128075;</span>
+            Namaste, {userName.split(' ')[0]}! <span className="inline-block text-2xl">&#128075;</span>
           </h1>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             {streak > 0

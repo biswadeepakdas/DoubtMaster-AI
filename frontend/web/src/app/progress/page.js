@@ -62,7 +62,7 @@ export default function ProgressPage() {
         return;
       }
       // Restore dark mode preference
-      const savedDark = localStorage.getItem('dm-dark-mode');
+      const savedDark = localStorage.getItem('dm-dark');
       if (savedDark === 'true') setDarkMode(true);
       fetchProgress();
     }
@@ -75,7 +75,7 @@ export default function ProgressPage() {
       document.documentElement.classList.remove('dark');
     }
     if (typeof window !== 'undefined') {
-      localStorage.setItem('dm-dark-mode', darkMode);
+      localStorage.setItem('dm-dark', String(darkMode));
     }
   }, [darkMode]);
 

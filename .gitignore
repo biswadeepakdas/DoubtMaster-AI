@@ -12,6 +12,15 @@ ios/
 dist/
 build/
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+.ruff_cache/
+htmlcov/
+
 # Secrets
 *.pem
 *.key
@@ -32,3 +41,6 @@ Thumbs.db
 
 # Claude
 .claude/
+
+# Docker volumes
+pgdata/

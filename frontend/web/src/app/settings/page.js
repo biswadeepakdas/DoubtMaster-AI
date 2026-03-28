@@ -64,7 +64,7 @@ export default function SettingsPage() {
         router.replace('/login');
         return;
       }
-      const savedDark = localStorage.getItem('dm-dark-mode');
+      const savedDark = localStorage.getItem('dm-dark');
       if (savedDark === 'true') setDarkMode(true);
       fetchProfile();
     }
@@ -77,7 +77,7 @@ export default function SettingsPage() {
       document.documentElement.classList.remove('dark');
     }
     if (typeof window !== 'undefined') {
-      localStorage.setItem('dm-dark-mode', darkMode);
+      localStorage.setItem('dm-dark', String(darkMode));
     }
   }, [darkMode]);
 
