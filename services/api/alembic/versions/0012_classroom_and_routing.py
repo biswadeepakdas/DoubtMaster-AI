@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 revision = "0012"
-down_revision = "0011"  # adjust to your actual latest revision
+down_revision = "0001"
 
 def upgrade():
 
