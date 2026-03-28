@@ -8,7 +8,8 @@ import {
   Zap, Search, Bell, Settings, LogOut, Home, FileText,
   Award, Calendar, ArrowRight, CheckCircle, XCircle,
   User, Crown, Sparkles, BookMarked, FlaskConical,
-  Atom, Dna, Calculator, Upload, Type, AlertTriangle, RefreshCw
+  Atom, Dna, Calculator, Upload, Type, AlertTriangle, RefreshCw,
+  GraduationCap
 } from 'lucide-react';
 import api from '../../lib/api';
 import MathRenderer, { MathBlock } from '../../components/MathRenderer';
@@ -117,7 +118,7 @@ export default function DashboardPage() {
       if (meRes.status === 'rejected') {
         throw meRes.reason;
       }
-      setUser(meRes.value.user);
+      setUser(meRes.value);
 
       // Progress (non-fatal)
       if (progressRes.status === 'fulfilled') {
@@ -249,7 +250,7 @@ export default function DashboardPage() {
         formData.append('language', 'en');
         const token = localStorage.getItem('dm-token');
         const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const res = await fetch(`${BASE_URL}/api/v1/questions/solve`, {
+        const res = await fetch(`${BASE_URL}/api/v1/questions/image-solve`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
@@ -499,6 +500,7 @@ export default function DashboardPage() {
                 // Hidden in animation-first wedge — uncomment post-validation
                 // { icon: BarChart3, label: 'Progress', active: false, action: () => { setSidebarOpen(false); router.push('/progress'); } },
                 // { icon: FileText, label: 'Mock Tests', active: false, action: () => { setSidebarOpen(false); router.push('/mock-tests'); } },
+                { icon: GraduationCap, label: 'Teacher', active: false, action: () => { setSidebarOpen(false); router.push('/teacher'); } },
                 { icon: Settings, label: 'Settings', active: false, action: () => { setSidebarOpen(false); router.push('/settings'); } },
               ].map(({ icon: Icon, label, active, action }) => (
                 <button

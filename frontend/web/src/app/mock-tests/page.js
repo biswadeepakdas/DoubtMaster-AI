@@ -114,8 +114,7 @@ export default function MockTestsPage() {
     setLoading(true);
     setError('');
     try {
-      const data = await api.post('/api/v1/mock-tests/submit', {
-        testId: testSession.testId,
+      const data = await api.post(`/api/v1/mock-tests/${testSession.sessionId}/submit`, {
         answers,
       });
       setResults(data);

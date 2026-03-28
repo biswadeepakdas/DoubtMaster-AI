@@ -23,6 +23,7 @@ from app.features.subscriptions.router import router as subscriptions_router
 from app.features.classroom.router     import router as classroom_router
 from app.features.admin.router         import router as admin_router
 from app.features.health.router        import router as health_router
+from app.features.mock_tests.router    import router as mock_tests_router
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,7 @@ app.include_router(subscriptions_router, prefix="/api/v1")
 app.include_router(homework_router,      prefix="/api/v1")
 app.include_router(classroom_router,     prefix="/api/v1")
 app.include_router(admin_router,         prefix="/api/v1")
+app.include_router(mock_tests_router,    prefix="/api/v1")
 
 
 @app.exception_handler(RequestValidationError)

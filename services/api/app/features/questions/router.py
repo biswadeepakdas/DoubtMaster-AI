@@ -2,14 +2,16 @@
 
 import json
 import logging
+import math
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import AuthContext, get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.core import llm_router
 
@@ -126,33 +128,202 @@ async def text_solve(
 
 @router.get("/history")
 async def history(
+    page:   int = 1,
     limit:  int = 10,
     search: Optional[str] = None,
     db:     AsyncSession = Depends(get_db),
     ctx:    AuthContext  = Depends(get_current_user),
 ):
+    safe_limit = min(limit, 50)
+    offset = (page - 1) * safe_limit
+
+    # Count total
+    if search:
+        count_result = await db.execute(
+            text("SELECT COUNT(*) FROM questions WHERE user_id = :uid AND text ILIKE :q"),
+            {"uid": ctx.user_id, "q": f"%{search}%"},
+        )
+    else:
+        count_result = await db.execute(
+            text("SELECT COUNT(*) FROM questions WHERE user_id = :uid"),
+            {"uid": ctx.user_id},
+        )
+    total = count_result.scalar_one()
+
+    # Fetch page
     if search:
         result = await db.execute(
             text("""
-                SELECT id, text, subject, topic, board, created_at
+                SELECT id, text, subject, topic, board, language, created_at
                 FROM questions
                 WHERE user_id = :uid AND text ILIKE :q
-                ORDER BY created_at DESC LIMIT :lim
+                ORDER BY created_at DESC LIMIT :lim OFFSET :off
             """),
-            {"uid": ctx.user_id, "q": f"%{search}%", "lim": min(limit, 50)},
+            {"uid": ctx.user_id, "q": f"%{search}%", "lim": safe_limit, "off": offset},
         )
     else:
         result = await db.execute(
             text("""
-                SELECT id, text, subject, topic, board, created_at
+                SELECT id, text, subject, topic, board, language, created_at
                 FROM questions
                 WHERE user_id = :uid
-                ORDER BY created_at DESC LIMIT :lim
+                ORDER BY created_at DESC LIMIT :lim OFFSET :off
             """),
-            {"uid": ctx.user_id, "lim": min(limit, 50)},
+            {"uid": ctx.user_id, "lim": safe_limit, "off": offset},
         )
     rows = result.mappings().all()
-    return {"questions": [dict(r) for r in rows]}
+
+    total_pages = max(1, math.ceil(total / safe_limit))
+
+    return {
+        "questions":  [dict(r) for r in rows],
+        "total":      total,
+        "page":       page,
+        "totalPages": total_pages,
+    }
+
+
+# ── Get single question ───────────────────────────────────────────────────────
+
+@router.get("/{question_id}")
+async def get_question(
+    question_id: str,
+    db:  AsyncSession = Depends(get_db),
+    ctx: AuthContext  = Depends(get_current_user),
+):
+    result = await db.execute(
+        text("""
+            SELECT id, text AS "extractedText", subject, topic, board, language,
+                   confidence, solve_time_ms, created_at AS "createdAt"
+            FROM questions
+            WHERE id = :qid AND user_id = :uid
+        """),
+        {"qid": question_id, "uid": ctx.user_id},
+    )
+    q = result.mappings().one_or_none()
+    if not q:
+        raise HTTPException(404, "Question not found")
+
+    # Re-solve to get full solution (stored solution retrieval not yet implemented)
+    resp = await llm_router.call("homework_solve", SOLVE_SYSTEM, q["extractedText"])
+    solution = _parse_solution(resp.content)
+
+    return {
+        "id":            str(q["id"]),
+        "extractedText": q["extractedText"],
+        "subject":       q["subject"],
+        "topic":         q["topic"],
+        "board":         q["board"],
+        "confidence":    solution.get("confidence", 0.9),
+        "createdAt":     str(q["createdAt"]),
+        "solution": {
+            "steps":             solution.get("steps", []),
+            "finalAnswer":       solution.get("finalAnswer", ""),
+            "conceptSummary":    solution.get("conceptSummary", ""),
+            "conceptTags":       solution.get("conceptTags", []),
+            "alternativeMethod": solution.get("alternativeMethod", ""),
+        },
+    }
+
+
+# ── Image solve ───────────────────────────────────────────────────────────────
+
+@router.post("/image-solve")
+async def image_solve(
+    board:    str = "CBSE",
+    language: str = "en",
+    class_:   Optional[int] = None,
+    image:    UploadFile = File(...),
+    db:   AsyncSession = Depends(get_db),
+    ctx:  AuthContext  = Depends(get_current_user),
+):
+    import base64
+    import anthropic as _anthropic
+
+    # Read image bytes and encode to base64
+    image_bytes = await image.read()
+    if len(image_bytes) > 10 * 1024 * 1024:  # 10 MB limit
+        raise HTTPException(400, "Image too large (max 10 MB)")
+
+    b64_image = base64.b64encode(image_bytes).decode()
+    content_type = image.content_type or "image/jpeg"
+
+    # Use Claude vision to extract text + solve in one shot
+    client = _anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+    vision_prompt = (
+        "This is a homework question from an Indian student. "
+        "First extract all the text/question from the image exactly. "
+        "Then solve it step by step as a CBSE/ICSE tutor. "
+        "Return ONLY valid JSON (no markdown): "
+        '{"extractedText":"...","subject":"Math","confidence":0.95,'
+        '"steps":[{"step":1,"title":"...","explanation":"...","latex":""}],'
+        '"finalAnswer":"...","conceptSummary":"...","conceptTags":["..."],"alternativeMethod":""}'
+    )
+
+    message = await client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=2048,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": content_type,
+                        "data": b64_image,
+                    },
+                },
+                {"type": "text", "text": vision_prompt},
+            ],
+        }],
+    )
+
+    raw = message.content[0].text
+    solution = _parse_solution(raw)
+    extracted_text = solution.pop("extractedText", "Image question")
+    subject = solution.get("subject", "General")
+
+    result = await db.execute(
+        text("""
+            INSERT INTO questions (user_id, text, subject, topic, board, language, source, solve_time_ms)
+            VALUES (:uid, :txt, :subj, :topic, :board, :lang, 'image', 0)
+            RETURNING id
+        """),
+        {
+            "uid":   ctx.user_id,
+            "txt":   extracted_text,
+            "subj":  subject,
+            "topic": solution.get("conceptTags", [""])[0] if solution.get("conceptTags") else None,
+            "board": board,
+            "lang":  language,
+        },
+    )
+    question_id = str(result.scalar_one())
+
+    await db.execute(
+        text("UPDATE users SET solve_count = solve_count + 1, last_active_at = now() WHERE id = :id"),
+        {"id": ctx.user_id},
+    )
+    await db.commit()
+
+    return {
+        "questionId":    question_id,
+        "subject":       subject,
+        "confidence":    solution.get("confidence", 0.9),
+        "extractedText": extracted_text,
+        "solution": {
+            "steps":             solution.get("steps", []),
+            "finalAnswer":       solution.get("finalAnswer", ""),
+            "conceptSummary":    solution.get("conceptSummary", ""),
+            "conceptTags":       solution.get("conceptTags", []),
+            "alternativeMethod": solution.get("alternativeMethod", ""),
+            "learnModeRequired": False,
+            "visibleSteps":      len(solution.get("steps", [])),
+            "totalSteps":        len(solution.get("steps", [])),
+        },
+    }
 
 
 # ── Learn mode ────────────────────────────────────────────────────────────────
