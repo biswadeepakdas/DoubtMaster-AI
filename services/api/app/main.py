@@ -60,6 +60,7 @@ app.add_middleware(
         "https://doubtmaster.ai",
         "https://www.doubtmaster.ai",
         "https://staging.doubtmaster.ai",
+        "https://doubt-master-ai.vercel.app",
         "http://localhost:3000",
         "http://localhost:19006",
     ],
