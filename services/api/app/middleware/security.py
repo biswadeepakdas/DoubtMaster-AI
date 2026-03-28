@@ -72,7 +72,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = request_id
 
         # Remove information-leaking headers
-        response.headers.pop("Server",       None)
-        response.headers.pop("X-Powered-By", None)
+        # MutableHeaders doesn't support .pop() — use del with guard
+        for h in ("Server", "X-Powered-By"):
+            if h in response.headers:
+                del response.headers[h]
 
         return response
