@@ -1,7 +1,10 @@
 [build]
-builder = "NIXPACKS"
+builder        = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 # No public port — internal Railway networking only.
 # Other Railway services reach this via http://openmaic.railway.internal:3000
-startCommand = "pnpm build && pnpm start"
+# Uses Dockerfile CMD: node server.js (standalone Next.js output)
+healthcheckPath    = "/api/health"
+healthcheckTimeout = 30
