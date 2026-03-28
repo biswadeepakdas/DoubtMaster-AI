@@ -194,7 +194,7 @@ async def get_question(
     result = await db.execute(
         text("""
             SELECT id, text AS "extractedText", subject, topic, board, language,
-                   confidence, solve_time_ms, created_at AS "createdAt"
+                   solve_time_ms, created_at AS "createdAt"
             FROM questions
             WHERE id = :qid AND user_id = :uid
         """),
