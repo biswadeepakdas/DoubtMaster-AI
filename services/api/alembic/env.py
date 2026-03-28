@@ -10,9 +10,12 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url with DATABASE_URL from environment
+# Railway injects DATABASE_URL as postgresql:// — convert to psycopg2 sync driver
 database_url = os.environ.get("DATABASE_URL", "")
 if database_url:
+    # asyncpg driver won't work with sync alembic — force psycopg2
+    database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+    database_url = database_url.replace("postgres://", "postgresql://")
     config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = None

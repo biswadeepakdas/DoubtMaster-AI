@@ -14,5 +14,5 @@ RUN addgroup --system app && adduser --system --group app
 USER app
 
 EXPOSE 8000
-# Single worker — see railway.toml comment
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Run migrations then start — alembic uses psycopg2 (sync), uvicorn uses asyncpg (async)
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
