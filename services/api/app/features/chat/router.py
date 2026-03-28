@@ -1,0 +1,78 @@
+"""Chat follow-up endpoint — streaming LLM responses for solution clarifications."""
+
+import json
+import logging
+
+import anthropic
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from typing import List, Optional
+
+from app.core.auth import AuthContext, get_current_user
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+class ChatMessage(BaseModel):
+    role: str   # "user" | "assistant"
+    content: str
+
+
+class FollowupRequest(BaseModel):
+    questionText:    str
+    solutionContext: Optional[str] = ""
+    subject:         Optional[str] = "General"
+    messages:        List[ChatMessage] = []
+    newMessage:      str
+
+
+@router.post("/followup")
+async def followup(
+    body: FollowupRequest,
+    ctx:  AuthContext = Depends(get_current_user),
+):
+    if not body.newMessage.strip():
+        raise HTTPException(400, "Message cannot be empty")
+
+    system = (
+        f"You are a friendly, patient Indian tutor helping a student understand "
+        f"a {body.subject} solution. Be concise, warm, and use simple language. "
+        f"The student was solving: {body.questionText!r}. "
+    )
+    if body.solutionContext:
+        system += f"The solution context: {body.solutionContext[:500]}"
+
+    # Build message history for Claude
+    messages = [{"role": m.role, "content": m.content} for m in body.messages]
+    messages.append({"role": "user", "content": body.newMessage.strip()})
+
+    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+    async def stream_response():
+        try:
+            async with client.messages.stream(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=512,
+                system=system,
+                messages=messages,
+            ) as stream:
+                async for text in stream.text_stream:
+                    # SSE format
+                    yield f"data: {json.dumps({'text': text})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            logger.error("Chat stream error: %s", e)
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        stream_response(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )

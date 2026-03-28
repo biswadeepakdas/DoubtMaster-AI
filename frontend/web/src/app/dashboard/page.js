@@ -97,6 +97,10 @@ export default function DashboardPage() {
   // Toast state
   const [toast, setToast] = useState('');
 
+  // Classroom state
+  const [classroomSession, setClassroomSession] = useState(null); // {sessionId, status, classroomUrl}
+  const classroomPollRef = useRef(null);
+
   // Loading & error
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
@@ -155,6 +159,12 @@ export default function DashboardPage() {
       fetchDashboardData();
     }
   }, [router, fetchDashboardData]);
+
+  useEffect(() => {
+    return () => {
+      if (classroomPollRef.current) clearInterval(classroomPollRef.current);
+    };
+  }, []);
 
   // Search: debounced API call
   const handleSearchChange = useCallback((value) => {
@@ -228,6 +238,9 @@ export default function DashboardPage() {
           language: 'en',
         });
         setCurrentSolution(data);
+        setClassroomSession(null);
+        if (classroomPollRef.current) clearInterval(classroomPollRef.current);
+        triggerClassroom(data.solution, data.questionId);
         // Refresh dashboard data to reflect the new question
         fetchDashboardData();
       } catch (err) {
@@ -263,6 +276,9 @@ export default function DashboardPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || data.message || 'Failed to solve');
         setCurrentSolution(data);
+        setClassroomSession(null);
+        if (classroomPollRef.current) clearInterval(classroomPollRef.current);
+        triggerClassroom(data.solution, data.questionId);
         fetchDashboardData();
       } catch (err) {
         setSolveError(err.message || 'Something went wrong. Please try again.');
@@ -284,6 +300,59 @@ export default function DashboardPage() {
       setEvaluation({ score: 0, passed: false, feedback: 'Error evaluating. Please try again.' });
     } finally {
       setIsEvaluating(false);
+    }
+  };
+
+  const triggerClassroom = async (solution, questionId) => {
+    // Don't spam — only generate if subject is known
+    if (!solution?.subject) return;
+    setClassroomSession({ status: 'generating', sessionId: null, classroomUrl: null });
+
+    const subjectMap = {
+      Mathematics: 'mathematics', Math: 'mathematics',
+      Physics: 'physics', Chemistry: 'chemistry', Biology: 'biology',
+    };
+    const subject = subjectMap[solution.subject] || solution.subject.toLowerCase();
+    const topic = solution.conceptTags?.[0] || solution.conceptSummary?.split(' ').slice(0, 4).join(' ') || 'concept';
+
+    try {
+      const data = await api.post('/api/v1/classroom/generate', {
+        mode: 'explain',
+        subject,
+        topic,
+        syllabus: user?.board || 'CBSE',
+        grade: user?.class ? String(user.class) : null,
+        source_question_id: questionId || null,
+      });
+
+      const sessionId = data.session_id;
+      setClassroomSession({ status: 'generating', sessionId, classroomUrl: null });
+
+      // Poll for status
+      let attempts = 0;
+      const poll = async () => {
+        if (attempts++ > 20) {
+          clearInterval(classroomPollRef.current);
+          setClassroomSession(prev => ({ ...prev, status: 'failed' }));
+          return;
+        }
+        try {
+          const status = await api.get(`/api/v1/classroom/status/${sessionId}`);
+          if (status.status === 'ready' && status.classroom_url) {
+            clearInterval(classroomPollRef.current);
+            setClassroomSession({ status: 'ready', sessionId, classroomUrl: status.classroom_url });
+          } else if (status.status === 'failed') {
+            clearInterval(classroomPollRef.current);
+            setClassroomSession(prev => ({ ...prev, status: 'failed' }));
+          }
+        } catch {
+          // ignore transient poll errors
+        }
+      };
+      classroomPollRef.current = setInterval(poll, 3000);
+      poll(); // immediate first check
+    } catch {
+      setClassroomSession(null); // silently fail — classroom is enhancement, not core
     }
   };
 
@@ -742,6 +811,47 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+
+            {/* OpenMAIC Classroom */}
+            {classroomSession && classroomSession.status !== 'failed' && (
+              <div className={`rounded-2xl p-4 border transition-all mb-6 ${
+                classroomSession.status === 'ready'
+                  ? 'border-teal-300 dark:border-teal-500/40 bg-teal-50 dark:bg-teal-500/10'
+                  : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                      classroomSession.status === 'ready' ? 'bg-teal-500' : 'bg-gray-200 dark:bg-slate-700'
+                    }`}>
+                      {classroomSession.status === 'ready' ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+                      ) : (
+                        <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold ${classroomSession.status === 'ready' ? 'text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-300'}`}>
+                        {classroomSession.status === 'ready' ? 'OpenMAIC Classroom Ready' : 'Generating AI Classroom\u2026'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {classroomSession.status === 'ready' ? 'Interactive explanation with animations' : 'Creating personalized visual explanation'}
+                      </p>
+                    </div>
+                  </div>
+                  {classroomSession.status === 'ready' && classroomSession.classroomUrl && (
+                    <a
+                      href={classroomSession.classroomUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition-colors"
+                    >
+                      Watch <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Diagram (biology, physics, chemistry) */}
             {currentSolution.solution?.diagram && (

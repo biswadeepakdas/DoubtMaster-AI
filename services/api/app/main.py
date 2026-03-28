@@ -16,6 +16,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.security import SecurityMiddleware
 
 from app.features.auth.router          import router as auth_router
+from app.features.chat.router          import router as chat_router
 from app.features.homework.router      import router as homework_router
 from app.features.questions.router     import router as questions_router
 from app.features.user.router          import router as user_router
@@ -86,6 +87,7 @@ app.include_router(homework_router,      prefix="/api/v1")
 app.include_router(classroom_router,     prefix="/api/v1")
 app.include_router(admin_router,         prefix="/api/v1")
 app.include_router(mock_tests_router,    prefix="/api/v1")
+app.include_router(chat_router,          prefix="/api/v1")
 
 
 @app.exception_handler(RequestValidationError)

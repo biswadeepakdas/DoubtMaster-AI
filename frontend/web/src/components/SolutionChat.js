@@ -90,62 +90,34 @@ Rules:
       }
 
       // Handle streaming response
-      const reader = res.body?.getReader();
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let fullContent = '';
+      let buffer = '';
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-
-          // Parse SSE chunks
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') break;
-              try {
-                const parsed = JSON.parse(data);
-                const token = parsed.choices?.[0]?.delta?.content || parsed.content || '';
-                fullContent += token;
-                setMessages(prev => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { role: 'assistant', content: fullContent };
-                  return updated;
-                });
-              } catch {
-                // Plain text chunk (non-SSE)
-                fullContent += data;
-                setMessages(prev => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { role: 'assistant', content: fullContent };
-                  return updated;
-                });
-              }
-            } else if (line.trim() && !line.startsWith(':')) {
-              // Plain text response (non-streaming fallback)
-              fullContent += line;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop(); // keep incomplete chunk
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') break;
+          try {
+            const chunk = JSON.parse(payload);
+            if (chunk.text) {
               setMessages(prev => {
                 const updated = [...prev];
-                updated[updated.length - 1] = { role: 'assistant', content: fullContent };
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  content: updated[updated.length - 1].content + chunk.text,
+                };
                 return updated;
               });
             }
-          }
+          } catch { /* ignore parse errors */ }
         }
-      }
-
-      // If no streaming happened, try reading as plain JSON
-      if (!fullContent) {
-        const data = await res.json().catch(() => null);
-        fullContent = data?.content || data?.message || 'Sorry, I couldn\'t generate a response.';
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: 'assistant', content: fullContent };
-          return updated;
-        });
       }
     } catch (err) {
       setMessages(prev => {

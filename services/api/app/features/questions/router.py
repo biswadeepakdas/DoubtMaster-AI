@@ -25,8 +25,23 @@ SOLVE_SYSTEM = (
     "You are an expert CBSE/ICSE tutor for Indian students (grades 6-12). "
     "Solve the student's question step by step. "
     "Return ONLY valid JSON with this exact structure (no markdown, no extra text):\n"
-    '{"subject":"Math","confidence":0.95,"steps":[{"step":1,"title":"...","explanation":"...","latex":""}],'
-    '"finalAnswer":"...","conceptSummary":"...","conceptTags":["..."],"alternativeMethod":""}'
+    '{"subject":"Math","confidence":0.95,'
+    '"steps":[{"step":1,"title":"...","explanation":"...","latex":""}],'
+    '"finalAnswer":"...","conceptSummary":"...","conceptTags":["..."],'
+    '"alternativeMethod":"",'
+    '"diagram":"",'
+    '"animation":{"code":"","title":"","description":""}}'
+    "\n\nRules for diagram and animation fields:\n"
+    "- diagram: Include valid Mermaid.js code ONLY for Biology (cell diagrams, processes), "
+    "Chemistry (reaction diagrams), or when a flowchart aids understanding. "
+    "Leave empty string '' for Math/Physics pure calculations.\n"
+    "- animation.code: Include valid p5.js code ONLY for Math (graphs, geometry), "
+    "Physics (motion, waves, optics), or visual concepts. "
+    "The p5.js code must define setup() and draw() functions. "
+    "Canvas size: createCanvas(400, 300). Use simple, clear visuals. "
+    "Leave empty string '' if not applicable.\n"
+    "- animation.title: short title like 'Projectile Motion' or leave ''\n"
+    "- animation.description: one sentence explaining the animation, or ''"
 )
 
 
@@ -106,6 +121,10 @@ async def text_solve(
 
     await llm_router.log_routing(db, "homework_solve", resp, student_id=ctx.user_id)
 
+    anim = solution.get("animation", {})
+    if isinstance(anim, str):
+        anim = {}
+
     return {
         "questionId":    question_id,
         "subject":       subject,
@@ -117,6 +136,8 @@ async def text_solve(
             "conceptSummary":     solution.get("conceptSummary", ""),
             "conceptTags":        solution.get("conceptTags", []),
             "alternativeMethod":  solution.get("alternativeMethod", ""),
+            "diagram":            solution.get("diagram", "") or "",
+            "animation":          anim if anim.get("code") else None,
             "learnModeRequired":  False,
             "visibleSteps":       len(solution.get("steps", [])),
             "totalSteps":         len(solution.get("steps", [])),
@@ -308,6 +329,10 @@ async def image_solve(
     )
     await db.commit()
 
+    anim = solution.get("animation", {})
+    if isinstance(anim, str):
+        anim = {}
+
     return {
         "questionId":    question_id,
         "subject":       subject,
@@ -319,6 +344,8 @@ async def image_solve(
             "conceptSummary":    solution.get("conceptSummary", ""),
             "conceptTags":       solution.get("conceptTags", []),
             "alternativeMethod": solution.get("alternativeMethod", ""),
+            "diagram":           solution.get("diagram", "") or "",
+            "animation":         anim if anim.get("code") else None,
             "learnModeRequired": False,
             "visibleSteps":      len(solution.get("steps", [])),
             "totalSteps":        len(solution.get("steps", [])),
