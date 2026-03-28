@@ -26,8 +26,7 @@ class Settings(BaseSettings):
     # ── LLM providers — 3-tier cost router ───────────────────────────────────
     ANTHROPIC_API_KEY: str               # Tier 3 — Claude Sonnet
     DEEPSEEK_API_KEY:  str               # Tier 2 — DeepSeek V3
-    TOGETHER_API_KEY:  str               # Tier 1 — Llama 4 Maverick
-    NVIDIA_API_KEY:    str               # Special — Nemotron Hindi (pre-processing only)
+    NVIDIA_API_KEY:    str               # Tier 1 — Llama 4 Maverick via NIM + Nemotron Hindi
 
     # ── OpenMAIC sidecar ─────────────────────────────────────────────────────
     OPENMAIC_INTERNAL_URL: str = "http://openmaic.railway.internal:3000"

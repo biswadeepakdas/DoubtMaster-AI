@@ -1,7 +1,7 @@
 """
 3-Tier LLM Cost Router
 ======================
-Tier 1  Llama 4 Maverick · Together AI    $0.15/$0.60 per 1M tokens
+Tier 1  Llama 4 Maverick · NVIDIA NIM    free tier / pay-as-you-go
 Tier 2  DeepSeek V3 · DeepSeek direct    $0.028 cache/$0.28 miss/$0.42 out per 1M
 Tier 3  Claude Sonnet 4 · Anthropic       $3.00/$15.00 per 1M tokens
 Special NVIDIA Nemotron Hindi 4B · FREE   (pre-processing ONLY — see license warning)
@@ -105,12 +105,12 @@ def route(feature: str) -> LLMTier:
 
 # ── Singleton API clients ─────────────────────────────────────────────────────
 
-_t1 = AsyncOpenAI(api_key=settings.TOGETHER_API_KEY, base_url="https://api.together.xyz/v1")
+_nv = AsyncOpenAI(api_key=settings.NVIDIA_API_KEY,   base_url="https://integrate.api.nvidia.com/v1")
+_t1 = _nv   # Tier 1 reuses NVIDIA NIM client — no separate Together AI key needed
 _t2 = AsyncOpenAI(api_key=settings.DEEPSEEK_API_KEY, base_url="https://api.deepseek.com/v1")
 _t3 = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-_nv = AsyncOpenAI(api_key=settings.NVIDIA_API_KEY,   base_url="https://integrate.api.nvidia.com/v1")
 
-T1_MODEL = "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+T1_MODEL = "meta/llama-4-maverick-17b-128e-instruct"
 T2_MODEL = "deepseek-chat"   # Verify exact model ID in DeepSeek docs — cache is model-specific
 T3_MODEL = "claude-sonnet-4-6"
 NV_MODEL = "nvidia/nemotron-4-mini-hindi-4b-instruct"
