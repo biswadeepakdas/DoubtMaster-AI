@@ -15,11 +15,14 @@ from app.core.database import engine, init_db
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.security import SecurityMiddleware
 
-from app.features.auth.router      import router as auth_router
-from app.features.homework.router  import router as homework_router
-from app.features.classroom.router import router as classroom_router
-from app.features.admin.router     import router as admin_router
-from app.features.health.router    import router as health_router
+from app.features.auth.router          import router as auth_router
+from app.features.homework.router      import router as homework_router
+from app.features.questions.router     import router as questions_router
+from app.features.user.router          import router as user_router
+from app.features.subscriptions.router import router as subscriptions_router
+from app.features.classroom.router     import router as classroom_router
+from app.features.admin.router         import router as admin_router
+from app.features.health.router        import router as health_router
 
 logger = logging.getLogger(__name__)
 
@@ -74,10 +77,13 @@ app.add_middleware(
 )
 
 app.include_router(health_router)
-app.include_router(auth_router,      prefix="/api/v1")
-app.include_router(homework_router,  prefix="/api/v1")
-app.include_router(classroom_router, prefix="/api/v1")
-app.include_router(admin_router,     prefix="/api/v1")
+app.include_router(auth_router,          prefix="/api/v1")
+app.include_router(questions_router,     prefix="/api/v1")
+app.include_router(user_router,          prefix="/api/v1")
+app.include_router(subscriptions_router, prefix="/api/v1")
+app.include_router(homework_router,      prefix="/api/v1")
+app.include_router(classroom_router,     prefix="/api/v1")
+app.include_router(admin_router,         prefix="/api/v1")
 
 
 @app.exception_handler(RequestValidationError)
