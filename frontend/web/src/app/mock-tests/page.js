@@ -340,11 +340,11 @@ export default function MockTestsPage() {
             <div className="space-y-3">
               {question.options.map((option, i) => {
                 const label = optionLabels[i];
-                const isSelected = answers[question.id] === label;
+                const isSelected = answers[question.id] === i;
                 return (
                   <button
                     key={label}
-                    onClick={() => selectAnswer(question.id, label)}
+                    onClick={() => selectAnswer(question.id, i)}
                     className={`w-full text-left flex items-start gap-3 p-4 rounded-xl transition-all ${
                       isSelected
                         ? 'bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border-2 border-teal-500 shadow-sm'

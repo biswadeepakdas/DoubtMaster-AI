@@ -1,6 +1,8 @@
 """Auth endpoints: signup, login, refresh, logout, me."""
 
 import hashlib
+import random
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt
@@ -161,6 +163,123 @@ async def login(body: LoginRequest, request: Request, db: AsyncSession = Depends
     )
     await audit(db, "login", user_id=str(user["id"]), ip_address=ip, user_agent=ua)
     return pair
+
+
+# ── Phone OTP login (send OTP) ────────────────────────────────────────────────
+
+class PhoneOTPRequest(BaseModel):
+    phone: str   # "+91XXXXXXXXXX"
+
+
+@router.post("/login/otp")
+async def send_login_otp(body: PhoneOTPRequest, db: AsyncSession = Depends(get_db)):
+    phone = body.phone.strip()
+    if not phone:
+        raise HTTPException(400, "Phone number required")
+
+    # Check user exists
+    result = await db.execute(text("SELECT id FROM users WHERE phone = :p"), {"p": phone})
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(404, "No account found for this phone number")
+
+    otp = str(random.randint(100000, 999999))
+    expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    # Upsert otp_store
+    await db.execute(
+        text("""
+            INSERT INTO otp_store (phone, otp, expires_at)
+            VALUES (:p, :otp, :exp)
+            ON CONFLICT (phone) DO UPDATE SET otp = :otp, expires_at = :exp, created_at = now()
+        """),
+        {"p": phone, "otp": otp, "exp": expires},
+    )
+    await db.commit()
+
+    # Log OTP (SMS integration goes here — for now visible in Railway logs)
+    import logging
+    logging.getLogger(__name__).info("OTP for %s: %s", phone, otp)
+
+    return {"message": "OTP sent", "debug_otp": otp}  # remove debug_otp in production
+
+
+# ── Verify OTP (login or signup) ──────────────────────────────────────────────
+
+class VerifyOTPRequest(BaseModel):
+    identifier: str   # phone or email
+    otp:        str
+    method:     str = "phone"   # "phone" | "email"
+    action:     str = "login"   # "login" | "signup"
+
+
+@router.post("/verify-otp")
+async def verify_otp(body: VerifyOTPRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    identifier = body.identifier.strip()
+    ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip()
+    ua = request.headers.get("User-Agent", "")
+
+    # Look up stored OTP
+    result = await db.execute(
+        text("SELECT otp, expires_at FROM otp_store WHERE phone = :p"),
+        {"p": identifier},
+    )
+    stored = result.mappings().one_or_none()
+
+    if not stored:
+        raise HTTPException(400, "No OTP found. Please request a new one.")
+
+    if stored["expires_at"].replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(400, "OTP has expired. Please request a new one.")
+
+    if stored["otp"] != body.otp.strip():
+        raise HTTPException(400, "Invalid OTP. Please try again.")
+
+    # Delete used OTP
+    await db.execute(text("DELETE FROM otp_store WHERE phone = :p"), {"p": identifier})
+
+    # Fetch or create user
+    result = await db.execute(
+        text("SELECT id, email, phone, role, is_pro FROM users WHERE phone = :p"),
+        {"p": identifier},
+    )
+    user = result.mappings().one_or_none()
+
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    await db.execute(
+        text("UPDATE users SET last_active_at = now() WHERE id = :id"),
+        {"id": str(user["id"])},
+    )
+    await db.commit()
+
+    pair = await issue_token_pair(
+        str(user["id"]), user["email"] or user["phone"], user["role"], user["is_pro"],
+        db, ip=ip, ua=ua,
+    )
+    await audit(db, "login_otp", user_id=str(user["id"]), ip_address=ip, user_agent=ua)
+    return {"accessToken": pair.access_token, "refreshToken": pair.refresh_token}
+
+
+# ── Verify signup OTP ─────────────────────────────────────────────────────────
+
+@router.post("/verify-signup")
+async def verify_signup(body: VerifyOTPRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    """Same as verify-otp but explicit signup action — forwards to the same logic."""
+    return await verify_otp(body, request, db)
+
+
+# ── Resend OTP ────────────────────────────────────────────────────────────────
+
+class ResendOTPRequest(BaseModel):
+    identifier: str
+    method:     str = "phone"
+
+
+@router.post("/resend-otp")
+async def resend_otp(body: ResendOTPRequest, db: AsyncSession = Depends(get_db)):
+    return await send_login_otp(PhoneOTPRequest(phone=body.identifier), db)
 
 
 # ── Me ────────────────────────────────────────────────────────────────────────

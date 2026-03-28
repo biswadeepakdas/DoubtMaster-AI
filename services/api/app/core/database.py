@@ -186,6 +186,14 @@ async def init_db():
             )
         """))
         await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)"))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS otp_store (
+                phone      TEXT PRIMARY KEY,
+                otp        TEXT NOT NULL,
+                expires_at TIMESTAMPTZ NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """))
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

@@ -88,7 +88,7 @@ export default function SettingsPage() {
     try {
       const data = await api.put('/api/v1/user/profile', {
         name: form.name.trim(),
-        class: form.class,
+        class_: form.class,
         board: form.board,
         language: form.language,
       });
