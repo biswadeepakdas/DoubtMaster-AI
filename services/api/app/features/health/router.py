@@ -26,9 +26,11 @@ async def health_check():
         for i, c in enumerate(checks)
     ]
     healthy = all(r.get("status") == "ok" for r in results)
+    # Always return 200 so Railway healthcheck doesn't kill the container.
+    # Use the "status" field to distinguish healthy vs degraded in monitoring.
     return JSONResponse(
         {"status": "healthy" if healthy else "degraded", "checks": results},
-        status_code=200 if healthy else 503,
+        status_code=200,
     )
 
 
