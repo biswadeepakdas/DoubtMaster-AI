@@ -15,7 +15,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 
 class ProfileUpdateRequest(BaseModel):
     name:     Optional[str] = None
-    class_:   Optional[int] = None
+    class_:   Optional[str] = None   # stored as text; "6"-"12" or "Dropper"
     board:    Optional[str] = None
     language: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -33,7 +33,10 @@ async def update_profile(
     if body.name is not None:
         updates["name"] = body.name.strip()
     if body.class_ is not None:
-        updates["class"] = body.class_
+        try:
+            updates["class"] = int(body.class_)
+        except (ValueError, TypeError):
+            pass  # Skip non-integer values like "Dropper"
     if body.board is not None:
         updates["board"] = body.board
     if body.language is not None:

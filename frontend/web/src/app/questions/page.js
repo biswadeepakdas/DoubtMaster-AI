@@ -353,7 +353,7 @@ export default function QuestionsPage() {
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                         <Clock size={12} />
-                        {timeAgo(q.createdAt)}
+                        {timeAgo(q.created_at)}
                       </div>
                       {isExpanded ? (
                         <ChevronUp size={18} className="text-teal-500" />
