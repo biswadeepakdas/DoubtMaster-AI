@@ -20,9 +20,23 @@ async def status(
         {"id": ctx.user_id},
     )
     user = result.mappings().one_or_none()
-    plan = user["plan"] if user else "free"
+    plan   = user["plan"]   if user else "free"
+    is_pro = user["is_pro"] if user else False
+    # Also check the subscriptions table for an active subscription
+    sub_result = await db.execute(
+        text("""
+            SELECT plan FROM subscriptions
+            WHERE user_id = :uid AND status = 'active' AND expires_at > now()
+            ORDER BY expires_at DESC LIMIT 1
+        """),
+        {"uid": ctx.user_id},
+    )
+    active_sub = sub_result.mappings().one_or_none()
+    active = active_sub is not None
+    if active_sub:
+        plan = active_sub["plan"]
     return {
         "plan":   plan,
-        "is_pro": plan in ("pro", "champion"),
-        "active": True,
+        "isPro":  is_pro or plan in ("pro", "champion"),
+        "active": active,
     }

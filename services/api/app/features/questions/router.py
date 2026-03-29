@@ -175,7 +175,8 @@ async def history(
     if search:
         result = await db.execute(
             text("""
-                SELECT id, text AS "extractedText", subject, topic, board, language, created_at
+                SELECT id, text AS "extractedText", subject, topic, board, language,
+                       created_at AS "createdAt"
                 FROM questions
                 WHERE user_id = :uid AND text ILIKE :q
                 ORDER BY created_at DESC LIMIT :lim OFFSET :off
@@ -185,7 +186,8 @@ async def history(
     else:
         result = await db.execute(
             text("""
-                SELECT id, text AS "extractedText", subject, topic, board, language, created_at
+                SELECT id, text AS "extractedText", subject, topic, board, language,
+                       created_at AS "createdAt"
                 FROM questions
                 WHERE user_id = :uid
                 ORDER BY created_at DESC LIMIT :lim OFFSET :off

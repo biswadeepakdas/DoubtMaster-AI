@@ -52,9 +52,13 @@ async def update_profile(
     )
     await db.commit()
 
-    # Return updated user
+    # Return updated user with camelCase field names
     result = await db.execute(
-        text("SELECT id, email, phone, name, class, board, language, plan, role, is_pro, avatar_url FROM users WHERE id = :id"),
+        text("""
+            SELECT id, email, phone, name, "class", board, language, plan, role,
+                   is_pro AS "isPro", avatar_url AS "avatarUrl"
+            FROM users WHERE id = :id
+        """),
         {"id": ctx.user_id},
     )
     user = result.mappings().one_or_none()

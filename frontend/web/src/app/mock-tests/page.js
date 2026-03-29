@@ -115,7 +115,9 @@ export default function MockTestsPage() {
     setError('');
     try {
       const data = await api.post(`/api/v1/mock-tests/${testSession.sessionId}/submit`, {
-        answers,
+        answers: Object.fromEntries(
+          Object.entries(answers).map(([k, v]) => [String(k), v])
+        ),
       });
       setResults(data);
       setScreen(SCREEN.RESULTS);
@@ -129,8 +131,8 @@ export default function MockTestsPage() {
   }, [testSession, answers]);
 
   // ─── Answer selection ───
-  const selectAnswer = (questionId, option) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: option }));
+  const selectAnswer = (questionIndex, option) => {
+    setAnswers((prev) => ({ ...prev, [String(questionIndex)]: option }));
   };
 
   // ─── Format time ───
@@ -291,7 +293,7 @@ export default function MockTestsPage() {
           <div className="flex flex-wrap gap-2 mb-6">
             {questions.map((q, i) => {
               const isActive = i === currentQ;
-              const isAnswered = answers[q.id] !== undefined;
+              const isAnswered = answers[String(q.index ?? i)] !== undefined;
               let pillClass;
               if (isActive) {
                 pillClass = 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-500/20';
@@ -306,7 +308,7 @@ export default function MockTestsPage() {
               }
               return (
                 <button
-                  key={q.id}
+                  key={q.index ?? i}
                   onClick={() => setCurrentQ(i)}
                   className={`w-9 h-9 rounded-lg text-xs font-bold transition-all ${pillClass}`}
                 >
@@ -340,11 +342,12 @@ export default function MockTestsPage() {
             <div className="space-y-3">
               {question.options.map((option, i) => {
                 const label = optionLabels[i];
-                const isSelected = answers[question.id] === i;
+                const qIdx = question.index ?? currentQ;
+                const isSelected = answers[String(qIdx)] === i;
                 return (
                   <button
                     key={label}
-                    onClick={() => selectAnswer(question.id, i)}
+                    onClick={() => selectAnswer(qIdx, i)}
                     className={`w-full text-left flex items-start gap-3 p-4 rounded-xl transition-all ${
                       isSelected
                         ? 'bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border-2 border-teal-500 shadow-sm'
@@ -432,7 +435,7 @@ export default function MockTestsPage() {
   // ═══════════════════════════════════════════
   const renderResults = () => {
     if (!results) return null;
-    const { score, total, percentage, timeTaken, results: questionResults } = results;
+    const { score: percentage, correct: score, total, questions: questionResults } = results;
 
     // Score ring color
     const ringColor = percentage >= 80 ? 'text-green-500' : percentage >= 50 ? 'text-yellow-500' : 'text-red-500';
@@ -467,8 +470,8 @@ export default function MockTestsPage() {
           </div>
 
           <div className={`flex items-center justify-center gap-1 text-sm ${textSecondary}`}>
-            <Clock size={14} />
-            Time taken: {formatTimeTaken(timeTaken)}
+            <Trophy size={14} />
+            {score} correct out of {total}
           </div>
         </div>
 

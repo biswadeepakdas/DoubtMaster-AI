@@ -55,7 +55,7 @@ async def followup(
     async def stream_response():
         try:
             async with client.messages.stream(
-                model="claude-haiku-4-5-20251001",
+                model="claude-haiku-4-5",
                 max_tokens=512,
                 system=system,
                 messages=messages,

@@ -32,8 +32,11 @@ async def list_students(
 
     result = await db.execute(
         text("""
-            SELECT id, name, email, phone, class, board, plan, role,
-                   solve_count, streak, last_active_at, created_at
+            SELECT id, name, email, phone, "class", board, plan, role,
+                   solve_count AS "solveCount",
+                   streak,
+                   last_active_at AS "lastActiveAt",
+                   created_at AS "createdAt"
             FROM users
             WHERE role = 'student'
             ORDER BY solve_count DESC
