@@ -3,7 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,12 +15,20 @@ router = APIRouter(prefix="/user", tags=["user"])
 
 class ProfileUpdateRequest(BaseModel):
     name:     Optional[str] = None
-    class_:   Optional[str] = None   # stored as text; "6"-"12" or "Dropper"
+    class_:   Optional[str] = Field(default=None, alias="class")
     board:    Optional[str] = None
     language: Optional[str] = None
     avatar_url: Optional[str] = None
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("class_", mode="before")
+    @classmethod
+    def coerce_class_to_str(cls, v):
+        """Accept integer class values (e.g. 10) and coerce to string."""
+        if v is None:
+            return v
+        return str(v)
 
 
 @router.put("/profile")

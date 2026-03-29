@@ -244,7 +244,7 @@ async def get_question(
         raise HTTPException(404, "Question not found")
 
     # Re-solve to get full solution (stored solution retrieval not yet implemented)
-    resp = await llm_router.call("homework_solve", SOLVE_SYSTEM, q["extractedText"], max_tokens=2048)
+    resp = await llm_router.call("homework_solve", SOLVE_SYSTEM, q["extractedText"], max_tokens=4096)
     solution = _parse_solution(resp.content)
 
     return {
