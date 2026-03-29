@@ -188,6 +188,7 @@ async def _call_t2(sys: str, usr: str, max_tok: int) -> dict:
         messages=[{"role": "system", "content": sys}, {"role": "user", "content": usr}],
         max_tokens=max_tok,
         temperature=0.3,
+        response_format={"type": "json_object"},
     )
     u         = r.usage
     cache_hit = getattr(u, "prompt_cache_hit_tokens", 0) > 0 if u else False
