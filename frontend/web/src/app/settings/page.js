@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Sun, Moon, ArrowLeft, User, Mail, Phone, BookOpen,
@@ -22,6 +22,7 @@ const LANGUAGE_OPTIONS = ['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Ben
 export default function SettingsPage() {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
+  const darkModeInitialized = useRef(false);
 
   // User data
   const [user, setUser] = useState(null);
@@ -75,6 +76,12 @@ export default function SettingsPage() {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+    // Skip localStorage write on first render so we don't overwrite
+    // the saved preference before the auth-guard effect has read it.
+    if (!darkModeInitialized.current) {
+      darkModeInitialized.current = true;
+      return;
     }
     if (typeof window !== 'undefined') {
       localStorage.setItem('dm-dark', String(darkMode));

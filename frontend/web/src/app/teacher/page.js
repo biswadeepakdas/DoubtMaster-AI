@@ -13,6 +13,7 @@ export default function TeacherDashboard() {
   const router = useRouter();
   const [dark, setDark] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [roleChecked, setRoleChecked] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
   const [students, setStudents] = useState([]);
@@ -25,7 +26,22 @@ export default function TeacherDashboard() {
       const token = localStorage.getItem('dm-token');
       if (!token) { router.replace('/login'); return; }
     }
-    fetchData();
+    // Check role before loading teacher data
+    api.get('/api/v1/auth/me')
+      .then((data) => {
+        const role = (data.user || data)?.role;
+        if (role !== 'teacher' && role !== 'admin') {
+          router.replace('/dashboard');
+          return;
+        }
+        setRoleChecked(true);
+        fetchData();
+      })
+      .catch(() => {
+        // If /me fails (e.g. 401), the api utility redirects to /login automatically.
+        // For any other error just redirect to dashboard.
+        router.replace('/dashboard');
+      });
   }, []);
 
   const toggleDark = () => {
@@ -121,8 +137,8 @@ export default function TeacherDashboard() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Monitor student activity and progress</p>
         </div>
 
-        {/* Error state */}
-        {error && !loading && (
+        {/* Error state (only shown to verified teacher/admin users) */}
+        {error && !loading && roleChecked && (
           <div className="mb-8 rounded-2xl p-8 text-center border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10">
             <AlertTriangle size={40} className="mx-auto mb-3 text-red-500" />
             <p className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">{error}</p>
@@ -133,14 +149,14 @@ export default function TeacherDashboard() {
           </div>
         )}
 
-        {/* Loading */}
-        {loading && (
+        {/* Loading (also shown while role is being verified) */}
+        {(loading || !roleChecked) && (
           <div className="flex items-center justify-center py-24">
             <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
-        {!loading && !error && (
+        {!loading && roleChecked && !error && (
           <>
             {/* Stats grid */}
             {stats && (

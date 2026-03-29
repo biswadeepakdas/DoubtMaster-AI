@@ -79,6 +79,10 @@ function SignupContent() {
     }
 
     if (step === 1) {
+      if (method === 'email' && password.length < 8) {
+        setError('Password must be at least 8 characters');
+        return;
+      }
       setStep(2);
       return;
     }

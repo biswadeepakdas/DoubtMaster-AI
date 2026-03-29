@@ -15,7 +15,8 @@ import {
 /* Animated counter hook                               */
 /* -------------------------------------------------- */
 function useCounter(target, duration = 2000, startOnView = true) {
-  const [count, setCount] = useState(0);
+  // Default to the target value so the number is never shown as 0 on fast loads.
+  const [count, setCount] = useState(target);
   const ref = useRef(null);
   const started = useRef(false);
 
@@ -25,6 +26,8 @@ function useCounter(target, duration = 2000, startOnView = true) {
       ([entry]) => {
         if (entry.isIntersecting && !started.current) {
           started.current = true;
+          // Reset to 0 then animate up to target when the element enters view.
+          setCount(0);
           const startTime = performance.now();
           const step = (now) => {
             const progress = Math.min((now - startTime) / duration, 1);
