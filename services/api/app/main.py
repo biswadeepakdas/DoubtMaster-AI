@@ -64,6 +64,8 @@ app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://doubtmasterai.com",
+        "https://www.doubtmasterai.com",
         "https://doubtmaster.ai",
         "https://www.doubtmaster.ai",
         "https://staging.doubtmaster.ai",

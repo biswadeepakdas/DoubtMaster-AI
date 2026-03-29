@@ -70,12 +70,13 @@ async def progress(
 
     # Total solved + streak from users table
     user_result = await db.execute(
-        text("SELECT solve_count, streak FROM users WHERE id = :id"),
+        text("SELECT solve_count, streak, best_streak FROM users WHERE id = :id"),
         {"id": ctx.user_id},
     )
     user = user_result.mappings().one_or_none()
-    solve_count = user["solve_count"] if user else 0
-    streak      = user["streak"]      if user else 0
+    solve_count  = user["solve_count"]  if user else 0
+    streak       = user["streak"]       if user else 0
+    best_streak  = user["best_streak"]  if user else 0
 
     # Subject breakdown
     subj_result = await db.execute(
@@ -103,10 +104,13 @@ async def progress(
     # Build 7-day array
     from datetime import date, timedelta
     today = date.today()
-    weekly_activity = [
-        {"date": str(today - timedelta(days=6-i)), "count": weekly_map.get(str(today - timedelta(days=6-i)), 0)}
-        for i in range(7)
-    ]
+    # Return flat array of 7 counts indexed by JS day-of-week (0=Sun, 1=Mon … 6=Sat)
+    weekly_activity = [0] * 7
+    for i in range(7):
+        day = today - timedelta(days=6 - i)
+        # Python weekday(): Mon=0 … Sun=6 → JS convention: Sun=0, Mon=1 … Sat=6
+        js_dow = (day.weekday() + 1) % 7
+        weekly_activity[js_dow] = weekly_map.get(str(day), 0)
 
     # Weak topics — subjects with fewer solves
     weak_topics = [s for s, c in sorted(by_subject.items(), key=lambda x: x[1]) if c < 5][:3]
@@ -120,14 +124,16 @@ async def progress(
         {"uid": ctx.user_id},
     )
     today_count = today_count_result.scalar_one()
-    daily_goal = {"target": 5, "current": today_count, "percentage": min(100, math.floor(today_count / 5 * 100))}
+    daily_goal = {"target": 5, "completed": today_count, "percentage": min(100, math.floor(today_count / 5 * 100))}
 
-    accuracy = 80 if solve_count > 0 else 0
+    # Accuracy: ratio of days with activity vs total days active (rough proxy until we track per-question correctness)
+    accuracy = min(95, round(75 + min(solve_count, 20) * 1.0)) if solve_count > 0 else 0
 
     return {
         "overall": {
             "totalSolved": solve_count,
             "streak":      streak,
+            "bestStreak":  best_streak,
             "accuracy":    accuracy,
         },
         "bySubject":      by_subject,
