@@ -142,9 +142,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
           <a href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
-              <span className="text-white font-bold text-sm">D</span>
-            </div>
+            <img src="/logo-icon.jpg" alt="DoubtMaster AI" className="w-9 h-9 rounded-xl object-cover" />
             <span className={`font-bold text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               DoubtMaster <span className="text-teal-500">AI</span>
             </span>
@@ -234,6 +232,10 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left text */}
             <div className="text-center lg:text-left">
+              <div className="flex justify-center lg:justify-start mb-6 animate-fade-in-up">
+                <img src="/logo-dark.jpg" alt="DoubtMaster AI" className="h-24 w-auto rounded-2xl shadow-xl shadow-teal-500/20" />
+              </div>
+
               <div className="inline-flex items-center gap-2 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 px-4 py-2 rounded-full text-sm font-medium mb-6 animate-fade-in-up">
                 <GraduationCap size={16} />
                 <span>Designed for CBSE, ICSE &amp; State Boards</span>
@@ -245,7 +247,7 @@ export default function LandingPage() {
                 {ANIMATION_WEDGE_MODE ? (
                   <>See the Physics.{' '}<br className="hidden sm:block" /><span className="gradient-text">Don&#39;t Just Read It.</span></>
                 ) : (
-                  <>Samjho, Sirf{' '}<br className="hidden sm:block" /><span className="gradient-text">Answer Mat Dekho</span></>
+                  <>Clear Doubts.{' '}<br className="hidden sm:block" /><span className="gradient-text">Think Better.</span></>
                 )}
               </h1>
 
@@ -682,9 +684,7 @@ export default function LandingPage() {
             {/* Brand */}
             <div className="md:col-span-2">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">D</span>
-                </div>
+                <img src="/logo-icon.jpg" alt="DoubtMaster AI" className="w-9 h-9 rounded-xl object-cover" />
                 <span className="font-bold text-xl text-white">
                   DoubtMaster <span className="text-teal-400">AI</span>
                 </span>

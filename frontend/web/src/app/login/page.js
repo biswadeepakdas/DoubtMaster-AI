@@ -99,7 +99,7 @@ export default function LoginPage() {
       {/* Navbar */}
       <nav className="relative z-10 flex items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm">D</div>
+          <img src="/logo-icon.jpg" alt="DoubtMaster AI" className="w-9 h-9 rounded-xl object-cover" />
           <span className="text-xl font-bold text-slate-900 dark:text-white">DoubtMaster <span className="text-teal-600 dark:text-teal-400">AI</span></span>
         </Link>
         <div className="flex items-center gap-3">

@@ -106,9 +106,7 @@ export default function TeacherDashboard() {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xs">D</span>
-            </div>
+              <img src="/logo-icon.jpg" alt="DoubtMaster AI" className="w-8 h-8 rounded-lg object-cover" />
             <span className="font-bold text-lg text-gray-900 dark:text-white hidden sm:block">Teacher Dashboard</span>
           </div>
           <button onClick={toggleDark} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">

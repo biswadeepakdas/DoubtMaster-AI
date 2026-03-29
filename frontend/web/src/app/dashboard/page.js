@@ -437,9 +437,7 @@ export default function DashboardPage() {
               <Menu size={20} />
             </button>
             <a href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xs">D</span>
-              </div>
+              <img src="/logo-icon.jpg" alt="DoubtMaster AI" className="w-8 h-8 rounded-lg object-cover" />
               <span className={`font-bold text-lg hidden sm:block ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 DoubtMaster
               </span>
