@@ -562,12 +562,16 @@ export default function DashboardPage() {
               Logout
             </button>
 
-            {/* Avatar */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-              darkMode ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-600'
-            }`}>
+            {/* Avatar → Profile */}
+            <button
+              onClick={() => router.push('/profile')}
+              title="Profile & Settings"
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-opacity hover:opacity-80 ${
+                darkMode ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-600'
+              }`}
+            >
               {userName.charAt(0)}
-            </div>
+            </button>
           </div>
         </div>
       </header>
@@ -583,7 +587,8 @@ export default function DashboardPage() {
               {[
                 { icon: Home, label: 'Dashboard', active: true, action: () => {} },
                 { icon: Camera, label: 'Solve', active: false, action: () => { setSidebarOpen(false); document.getElementById('solve-card')?.scrollIntoView({ behavior: 'smooth' }); } },
-                { icon: BookMarked, label: 'My Questions', active: false, action: () => { setSidebarOpen(false); router.push('/questions'); } },
+                { icon: BookMarked, label: 'History', active: false, action: () => { setSidebarOpen(false); router.push('/history'); } },
+                { icon: User, label: 'Profile', active: false, action: () => { setSidebarOpen(false); router.push('/profile'); } },
                 // Hidden in animation-first wedge — uncomment post-validation
                 // { icon: BarChart3, label: 'Progress', active: false, action: () => { setSidebarOpen(false); router.push('/progress'); } },
                 // { icon: FileText, label: 'Mock Tests', active: false, action: () => { setSidebarOpen(false); router.push('/mock-tests'); } },
