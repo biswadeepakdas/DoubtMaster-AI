@@ -480,9 +480,11 @@ export default function MockTestsPage() {
         <div className="space-y-3 mb-8">
           {questionResults.map((r, i) => {
             const optionLabels = ['A', 'B', 'C', 'D'];
+            const correctLabel = optionLabels[r.correctIndex] ?? '';
+            const userLabel = r.selectedIndex != null ? (optionLabels[r.selectedIndex] ?? '') : null;
             return (
               <div
-                key={r.questionId}
+                key={r.index ?? i}
                 className={`rounded-2xl p-5 ${
                   darkMode ? 'bg-slate-800/50 border border-slate-700' : 'bg-white border border-gray-200'
                 }`}
@@ -506,8 +508,8 @@ export default function MockTestsPage() {
                     <div className="grid grid-cols-2 gap-1.5 mb-2">
                       {r.options.map((opt, oi) => {
                         const label = optionLabels[oi];
-                        const isUser = r.userAnswer === label;
-                        const isCorrect = r.correctAnswer === label;
+                        const isUser = r.selectedIndex === oi;
+                        const isCorrect = r.correctIndex === oi;
                         let optClass = darkMode ? 'bg-slate-800 text-gray-400' : 'bg-gray-50 text-gray-500';
                         if (isCorrect) optClass = 'bg-green-500/10 text-green-600 font-semibold';
                         if (isUser && !r.isCorrect) optClass = 'bg-red-500/10 text-red-500 line-through';
@@ -523,9 +525,9 @@ export default function MockTestsPage() {
 
                     {!r.isCorrect && (
                       <div className={`text-xs ${textSecondary}`}>
-                        <span className="font-semibold text-green-500">Correct: {r.correctAnswer}</span>
-                        {r.userAnswer
-                          ? <span className="ml-2 text-red-400">Your answer: {r.userAnswer}</span>
+                        <span className="font-semibold text-green-500">Correct: {correctLabel}</span>
+                        {userLabel
+                          ? <span className="ml-2 text-red-400">Your answer: {userLabel}</span>
                           : <span className="ml-2 text-red-400">Not answered</span>
                         }
                       </div>
