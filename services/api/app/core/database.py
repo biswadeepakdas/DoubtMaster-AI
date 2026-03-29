@@ -194,6 +194,10 @@ async def init_db():
                 created_at TIMESTAMPTZ DEFAULT now()
             )
         """))
+        # Add google_id column if it doesn't exist yet (idempotent migration)
+        await conn.execute(text("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE
+        """))
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

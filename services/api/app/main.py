@@ -16,6 +16,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.security import SecurityMiddleware
 
 from app.features.auth.router          import router as auth_router
+from app.features.auth.google          import router as google_auth_router
 from app.features.chat.router          import router as chat_router
 from app.features.homework.router      import router as homework_router
 from app.features.questions.router     import router as questions_router
@@ -82,6 +83,7 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(auth_router,          prefix="/api/v1")
+app.include_router(google_auth_router,   prefix="/api/v1")
 app.include_router(questions_router,     prefix="/api/v1")
 app.include_router(user_router,          prefix="/api/v1")
 app.include_router(subscriptions_router, prefix="/api/v1")

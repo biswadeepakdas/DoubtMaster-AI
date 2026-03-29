@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # ── SMS ──────────────────────────────────────────────────────────────────
     FAST2SMS_API_KEY: str = ""   # Fast2SMS API key; falls back to log-only if empty
 
+    # ── Google OAuth ──────────────────────────────────────────────────────────
+    GOOGLE_CLIENT_ID: str = ""   # Google OAuth 2.0 Web client ID
+
     # ── Observability ────────────────────────────────────────────────────────
     SENTRY_DSN:                str   = ""
     SENTRY_TRACES_SAMPLE_RATE: float = 0.1
