@@ -26,7 +26,7 @@ SOLVE_SYSTEM = (
     "Solve the student's question step by step. "
     "Return ONLY valid JSON with this exact structure (no markdown, no extra text):\n"
     '{"subject":"Math","confidence":0.95,'
-    '"steps":[{"step":1,"title":"...","explanation":"...","latex":""}],'
+    '"steps":[{"step":1,"title":"...","content":"...","formula":"","explanation":""}],'
     '"finalAnswer":"...","conceptSummary":"...","conceptTags":["..."],'
     '"alternativeMethod":"",'
     '"diagram":"",'
@@ -47,25 +47,41 @@ SOLVE_SYSTEM = (
 
 def _parse_solution(raw: str) -> dict:
     """Parse LLM JSON response, with fallback for non-JSON output."""
+    import re
+    clean = raw.strip()
+
+    # Try 1: direct JSON parse
     try:
-        # Strip markdown code fences if present
-        clean = raw.strip()
-        if clean.startswith("```"):
-            clean = clean.split("```")[1]
-            if clean.startswith("json"):
-                clean = clean[4:]
-        return json.loads(clean.strip())
+        return json.loads(clean)
     except Exception:
-        # Fallback: wrap raw text as a single step
-        return {
-            "subject": "General",
-            "confidence": 0.8,
-            "steps": [{"step": 1, "title": "Solution", "explanation": raw, "latex": ""}],
-            "finalAnswer": raw,
-            "conceptSummary": "",
-            "conceptTags": [],
-            "alternativeMethod": "",
-        }
+        pass
+
+    # Try 2: extract from markdown code fence ```json ... ```
+    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean, re.DOTALL)
+    if fence_match:
+        try:
+            return json.loads(fence_match.group(1))
+        except Exception:
+            pass
+
+    # Try 3: find the first { ... } JSON object anywhere in the text
+    brace_match = re.search(r"\{.*\}", clean, re.DOTALL)
+    if brace_match:
+        try:
+            return json.loads(brace_match.group(0))
+        except Exception:
+            pass
+
+    # Fallback: wrap raw text as a single step
+    return {
+        "subject": "General",
+        "confidence": 0.8,
+        "steps": [{"step": 1, "title": "Solution", "content": raw, "formula": ""}],
+        "finalAnswer": raw,
+        "conceptSummary": "",
+        "conceptTags": [],
+        "alternativeMethod": "",
+    }
 
 
 # ── Text solve ────────────────────────────────────────────────────────────────
@@ -280,7 +296,7 @@ async def image_solve(
         "Then solve it step by step as a CBSE/ICSE tutor. "
         "Return ONLY valid JSON (no markdown): "
         '{"extractedText":"...","subject":"Math","confidence":0.95,'
-        '"steps":[{"step":1,"title":"...","explanation":"...","latex":""}],'
+        '"steps":[{"step":1,"title":"...","content":"...","formula":"","explanation":""}],'
         '"finalAnswer":"...","conceptSummary":"...","conceptTags":["..."],"alternativeMethod":""}'
     )
 
