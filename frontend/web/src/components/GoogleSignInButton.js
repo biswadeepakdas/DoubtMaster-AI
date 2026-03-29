@@ -1,14 +1,17 @@
 'use client';
 
-import { GoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export default function GoogleSignInButton() {
   const router = useRouter();
   const [error, setError] = useState('');
+
+  if (!CLIENT_ID) return null;
 
   const handleSuccess = async (credentialResponse) => {
     setError('');
@@ -30,20 +33,22 @@ export default function GoogleSignInButton() {
   };
 
   return (
-    <div className="w-full flex flex-col items-center gap-2">
-      <GoogleLogin
-        onSuccess={handleSuccess}
-        onError={() => setError('Google sign-in was cancelled or failed.')}
-        theme="outline"
-        size="large"
-        width="100%"
-        text="continue_with"
-        shape="rectangular"
-        logo_alignment="left"
-      />
-      {error && (
-        <p className="text-red-500 dark:text-red-400 text-xs text-center">{error}</p>
-      )}
-    </div>
+    <GoogleOAuthProvider clientId={CLIENT_ID}>
+      <div className="w-full flex flex-col items-center gap-2">
+        <GoogleLogin
+          onSuccess={handleSuccess}
+          onError={() => setError('Google sign-in was cancelled or failed.')}
+          theme="outline"
+          size="large"
+          width="368"
+          text="continue_with"
+          shape="rectangular"
+          logo_alignment="left"
+        />
+        {error && (
+          <p className="text-red-500 dark:text-red-400 text-xs text-center">{error}</p>
+        )}
+      </div>
+    </GoogleOAuthProvider>
   );
 }
