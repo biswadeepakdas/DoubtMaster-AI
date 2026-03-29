@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY:     str
     STRIPE_WEBHOOK_SECRET: str
 
+    # ── SMS ──────────────────────────────────────────────────────────────────
+    FAST2SMS_API_KEY: str = ""   # Fast2SMS API key; falls back to log-only if empty
+
     # ── Observability ────────────────────────────────────────────────────────
     SENTRY_DSN:                str   = ""
     SENTRY_TRACES_SAMPLE_RATE: float = 0.1

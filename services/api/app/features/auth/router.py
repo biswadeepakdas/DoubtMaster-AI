@@ -145,8 +145,8 @@ async def signup(request: Request, db: AsyncSession = Depends(get_db)):
         )
         await db.commit()
 
-        import logging
-        logging.getLogger(__name__).info("Signup OTP for %s: %s", identifier, otp)
+        from app.features.auth.sms import send_otp_sms
+        await send_otp_sms(identifier, otp)
 
         # OTP flow — frontend will redirect to /verify-otp
         return {"requiresVerification": True, "message": "OTP sent to your phone"}
@@ -213,9 +213,8 @@ async def send_login_otp(body: PhoneOTPRequest, db: AsyncSession = Depends(get_d
     )
     await db.commit()
 
-    # Log OTP (SMS integration goes here — for now visible in Railway logs)
-    import logging
-    logging.getLogger(__name__).info("OTP for %s: %s", phone, otp)
+    from app.features.auth.sms import send_otp_sms
+    await send_otp_sms(phone, otp)
 
     return {"message": "OTP sent"}
 
