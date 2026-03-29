@@ -1193,7 +1193,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <a
-                href="/signup?plan=pro"
+                href="/pricing"
                 className="shrink-0 bg-white text-teal-600 px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all shadow-lg flex items-center gap-2"
               >
                 Upgrade Now <ArrowRight size={16} />

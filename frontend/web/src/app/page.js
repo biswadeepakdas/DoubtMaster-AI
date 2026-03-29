@@ -695,10 +695,10 @@ export default function LandingPage() {
               {/* Social icons */}
               <div className="flex gap-3">
                 {[
-                  { Icon: Twitter, label: 'Twitter', href: 'https://twitter.com' },
-                  { Icon: Instagram, label: 'Instagram', href: 'https://instagram.com' },
-                  { Icon: Youtube, label: 'YouTube', href: 'https://youtube.com' },
-                  { Icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com' },
+                  { Icon: Twitter, label: 'Twitter', href: 'https://twitter.com/doubtmasterai' },
+                  { Icon: Instagram, label: 'Instagram', href: 'https://instagram.com/doubtmasterai' },
+                  { Icon: Youtube, label: 'YouTube', href: 'https://youtube.com/@doubtmasterai' },
+                  { Icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com/company/doubtmasterai' },
                 ].map(({ Icon, label, href }) => (
                   <a
                     key={label}
@@ -724,8 +724,8 @@ export default function LandingPage() {
               <ul className="space-y-2.5 text-sm">
                 {[
                   { label: 'NCERT Solutions', href: '/questions' },
-                  { label: 'JEE Preparation', href: '/questions' },
-                  { label: 'NEET Preparation', href: '/questions' },
+                  { label: 'JEE Preparation', href: '/mock-tests' },
+                  { label: 'NEET Preparation', href: '/mock-tests' },
                   { label: 'Mock Tests', href: '/mock-tests' },
                   { label: 'Learn Mode', href: '/dashboard' },
                 ].map((item) => (
@@ -737,11 +737,11 @@ export default function LandingPage() {
               <div className="font-semibold text-white mb-4 text-sm">Company</div>
               <ul className="space-y-2.5 text-sm">
                 {[
-                  { label: 'About', href: '/' },
-                  { label: 'Careers', href: '/' },
-                  { label: 'Blog', href: '/' },
+                  { label: 'About', href: '/about' },
+                  { label: 'Careers', href: '/careers' },
+                  { label: 'Blog', href: '/blog' },
                   { label: 'Contact', href: 'mailto:support@doubtmaster.ai' },
-                  { label: 'Press', href: '/' },
+                  { label: 'Press', href: '/press' },
                 ].map((item) => (
                   <li key={item.label}><a href={item.href} className="text-gray-400 hover:text-teal-400 transition-colors">{item.label}</a></li>
                 ))}
@@ -751,10 +751,10 @@ export default function LandingPage() {
               <div className="font-semibold text-white mb-4 text-sm">Legal</div>
               <ul className="space-y-2.5 text-sm">
                 {[
-                  { label: 'Privacy Policy', href: '/settings' },
-                  { label: 'Terms of Service', href: '/settings' },
-                  { label: 'Refund Policy', href: '/settings' },
-                  { label: 'Cookie Policy', href: '/settings' },
+                  { label: 'Privacy Policy', href: '/privacy-policy' },
+                  { label: 'Terms of Service', href: '/terms-of-service' },
+                  { label: 'Refund Policy', href: '/refund-policy' },
+                  { label: 'Cookie Policy', href: '/cookie-policy' },
                 ].map((item) => (
                   <li key={item.label}><a href={item.href} className="text-gray-400 hover:text-teal-400 transition-colors">{item.label}</a></li>
                 ))}
