@@ -110,9 +110,7 @@ function VerifyOtpContent() {
       // login  uses /verify-otp   (accepts {phone, otp})
       const isSignup = action === 'signup';
       const endpoint = isSignup ? '/api/v1/auth/verify-signup' : '/api/v1/auth/verify-otp';
-      const payload = isSignup
-        ? { identifier, otp: code, method }
-        : { phone: identifier, otp: code };
+      const payload = { identifier, otp: code, method };
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

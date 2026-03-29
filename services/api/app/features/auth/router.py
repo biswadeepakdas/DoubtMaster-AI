@@ -131,7 +131,23 @@ async def signup(request: Request, db: AsyncSession = Depends(get_db)):
             {"phone": identifier, "name": name, "class": grade,
              "board": board, "plan": plan, "is_pro": is_pro},
         )
+
+        # Generate and store OTP for phone verification
+        otp = str(random.randint(100000, 999999))
+        expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+        await db.execute(
+            text("""
+                INSERT INTO otp_store (phone, otp, expires_at)
+                VALUES (:p, :otp, :exp)
+                ON CONFLICT (phone) DO UPDATE SET otp = :otp, expires_at = :exp, created_at = now()
+            """),
+            {"p": identifier, "otp": otp, "exp": expires},
+        )
         await db.commit()
+
+        import logging
+        logging.getLogger(__name__).info("Signup OTP for %s: %s", identifier, otp)
+
         # OTP flow — frontend will redirect to /verify-otp
         return {"requiresVerification": True, "message": "OTP sent to your phone"}
 
@@ -140,7 +156,7 @@ async def signup(request: Request, db: AsyncSession = Depends(get_db)):
 
 # ── Login ─────────────────────────────────────────────────────────────────────
 
-@router.post("/login", response_model=TokenPair)
+@router.post("/login")
 async def login(body: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         text("SELECT * FROM users WHERE email = :email"),
@@ -162,7 +178,7 @@ async def login(body: LoginRequest, request: Request, db: AsyncSession = Depends
         db, ip=ip, ua=ua,
     )
     await audit(db, "login", user_id=str(user["id"]), ip_address=ip, user_agent=ua)
-    return pair
+    return {"accessToken": pair.access_token, "refreshToken": pair.refresh_token}
 
 
 # ── Phone OTP login (send OTP) ────────────────────────────────────────────────
@@ -201,7 +217,7 @@ async def send_login_otp(body: PhoneOTPRequest, db: AsyncSession = Depends(get_d
     import logging
     logging.getLogger(__name__).info("OTP for %s: %s", phone, otp)
 
-    return {"message": "OTP sent", "debug_otp": otp}  # remove debug_otp in production
+    return {"message": "OTP sent"}
 
 
 # ── Verify OTP (login or signup) ──────────────────────────────────────────────
@@ -299,11 +315,12 @@ async def me(db: AsyncSession = Depends(get_db), ctx: AuthContext = Depends(get_
 
 # ── Refresh ───────────────────────────────────────────────────────────────────
 
-@router.post("/refresh", response_model=TokenPair)
+@router.post("/refresh")
 async def refresh(body: RefreshRequest, request: Request, db: AsyncSession = Depends(get_db)):
     ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip()
     ua = request.headers.get("User-Agent", "")
-    return await refresh_access_token(body.refresh_token, db, ip=ip, ua=ua)
+    pair = await refresh_access_token(body.refresh_token, db, ip=ip, ua=ua)
+    return {"accessToken": pair.access_token, "refreshToken": pair.refresh_token}
 
 
 # ── Logout ────────────────────────────────────────────────────────────────────

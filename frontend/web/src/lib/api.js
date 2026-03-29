@@ -4,13 +4,45 @@
  * Handles:
  *  - Base URL configuration via NEXT_PUBLIC_API_URL
  *  - Automatic Bearer token attachment from localStorage
- *  - 401 interceptor that clears the token and redirects to /login
+ *  - 401 interceptor: tries token refresh before redirecting to /login
  *  - Normalised error objects  { message, code, status }
  */
 
-const BASE_URL =
-  (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) ||
-  'http://localhost:3001';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+let _refreshPromise = null;
+
+async function _tryRefresh() {
+  if (_refreshPromise) return _refreshPromise;
+
+  _refreshPromise = (async () => {
+    const refreshToken =
+      typeof window !== 'undefined' ? localStorage.getItem('dm-refresh-token') : null;
+    if (!refreshToken) return false;
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      const newToken = data.accessToken || data.access_token;
+      const newRefresh = data.refreshToken || data.refresh_token;
+      if (!newToken) return false;
+      localStorage.setItem('dm-token', newToken);
+      if (newRefresh) localStorage.setItem('dm-refresh-token', newRefresh);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+
+  return _refreshPromise;
+}
 
 /**
  * Lightweight wrapper around fetch.
@@ -20,7 +52,7 @@ const BASE_URL =
  * @returns {Promise<any>} Parsed JSON response body.
  * @throws {{ message: string, code: string, status: number }}
  */
-export async function apiFetch(path, options = {}) {
+export async function apiFetch(path, options = {}, _isRetry = false) {
   const token =
     typeof window !== 'undefined' ? localStorage.getItem('dm-token') : null;
 
@@ -40,12 +72,15 @@ export async function apiFetch(path, options = {}) {
     headers,
   });
 
-  // --- 401: token expired / invalid ---
+  // --- 401: try token refresh once, then redirect ---
   if (res.status === 401) {
-    if (typeof window !== 'undefined') {
+    if (!_isRetry && typeof window !== 'undefined') {
+      const refreshed = await _tryRefresh();
+      if (refreshed) {
+        return apiFetch(path, options, true);
+      }
       localStorage.removeItem('dm-token');
       localStorage.removeItem('dm-refresh-token');
-      // Avoid redirect loops if already on /login
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
