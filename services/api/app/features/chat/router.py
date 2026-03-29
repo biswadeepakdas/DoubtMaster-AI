@@ -23,11 +23,8 @@ class ChatMessage(BaseModel):
 
 
 class FollowupRequest(BaseModel):
-    questionText:    str
-    solutionContext: Optional[str] = ""
-    subject:         Optional[str] = "General"
-    messages:        List[ChatMessage] = []
-    newMessage:      str
+    systemPrompt: str
+    messages:     List[ChatMessage] = []
 
 
 @router.post("/followup")
@@ -35,20 +32,13 @@ async def followup(
     body: FollowupRequest,
     ctx:  AuthContext = Depends(get_current_user),
 ):
-    if not body.newMessage.strip():
-        raise HTTPException(400, "Message cannot be empty")
+    if not body.messages:
+        raise HTTPException(400, "No messages provided")
 
-    system = (
-        f"You are a friendly, patient Indian tutor helping a student understand "
-        f"a {body.subject} solution. Be concise, warm, and use simple language. "
-        f"The student was solving: {body.questionText!r}. "
-    )
-    if body.solutionContext:
-        system += f"The solution context: {body.solutionContext[:500]}"
+    system = body.systemPrompt
 
     # Build message history for Claude
     messages = [{"role": m.role, "content": m.content} for m in body.messages]
-    messages.append({"role": "user", "content": body.newMessage.strip()})
 
     client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
