@@ -32,7 +32,8 @@ export default function SignupPage() {
 function SignupContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const selectedPlan = searchParams.get('plan') || 'free';
+  const selectedPlanRaw = searchParams.get('plan');
+  const selectedPlan = selectedPlanRaw === 'pro' ? 'pro' : 'free';
 
   const [dark, setDark] = useState(false);
   const [method, setMethod] = useState('phone'); // 'phone' | 'email'
@@ -62,8 +63,8 @@ function SignupContent() {
     localStorage.setItem('dm-dark', !dark);
   };
 
-  const planLabel = selectedPlan === 'pro' ? 'Pro (Topper)' : selectedPlan === 'champion' ? 'Champion' : 'Free (Muft)';
-  const planColor = selectedPlan === 'pro' ? 'text-teal-500' : selectedPlan === 'champion' ? 'text-amber-500' : 'text-green-500';
+  const planLabel = selectedPlan === 'pro' ? 'Pro (Topper)' : 'Free (Muft)';
+  const planColor = selectedPlan === 'pro' ? 'text-teal-500' : 'text-green-500';
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -356,8 +357,8 @@ function SignupContent() {
           {/* Terms */}
           <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
             By signing up, you agree to our{' '}
-            <a href="#" className="text-teal-500 hover:underline">Terms</a> and{' '}
-            <a href="#" className="text-teal-500 hover:underline">Privacy Policy</a>
+            <a href="/terms-of-service" className="text-teal-500 hover:underline">Terms</a> and{' '}
+            <a href="/privacy-policy" className="text-teal-500 hover:underline">Privacy Policy</a>
           </p>
         </div>
       </div>

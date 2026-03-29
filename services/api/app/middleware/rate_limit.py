@@ -24,7 +24,7 @@ from app.core.redis_client import redis_client
 RATE_LIMITS: dict[str, tuple[int, int]] = {
     # path_prefix: (max_requests, window_seconds)
     "/api/v1/auth/login":    (5,   60),    # 5 attempts per minute
-    "/api/v1/auth/register": (3,   3600),  # 3 registrations per hour
+    "/api/v1/auth/signup":   (3,   3600),  # 3 registrations per hour
     "/api/v1/auth/refresh":  (10,  60),
     "/api/v1/classroom":     (20,  3600),  # 20 classroom generates per hour
     "/api/v1/homework":      (100, 3600),  # 100 homework solves per hour

@@ -155,7 +155,7 @@ export default function MockTestsPage() {
     : 'bg-white border border-gray-200 hover:border-gray-300';
   const textPrimary = darkMode ? 'text-white' : 'text-gray-900';
   const textSecondary = darkMode ? 'text-gray-400' : 'text-gray-500';
-  const textMuted = darkMode ? 'text-gray-500' : 'text-gray-400';
+  const textMuted = darkMode ? 'text-gray-500' : 'text-gray-500';
 
   // ═══════════════════════════════════════════
   //  RENDER: TEST SELECTION

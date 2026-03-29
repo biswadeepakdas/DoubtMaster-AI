@@ -46,9 +46,20 @@ export default function AnimationRenderer({ code, title, description, className 
   <script>
     try {
       ${cleanCode}
+      window.addEventListener('message', (event) => {
+        if (!event || event.source !== window.parent) return;
+        if (event.data?.type !== 'animation-control') return;
+        if (event.data.action === 'pause') window.noLoop?.();
+        if (event.data.action === 'play') window.loop?.();
+      });
       window.parent.postMessage({ type: 'animation-loaded' }, '*');
     } catch(e) {
-      document.body.innerHTML = '<p style="color:#EF4444;padding:20px;font-family:system-ui;">Animation error: ' + e.message + '</p>';
+      const p = document.createElement('p');
+      p.style.color = '#EF4444';
+      p.style.padding = '20px';
+      p.style.fontFamily = 'system-ui';
+      p.textContent = 'Animation error: ' + e.message;
+      document.body.replaceChildren(p);
       window.parent.postMessage({ type: 'animation-error', message: e.message }, '*');
     }
   <\/script>
@@ -82,17 +93,15 @@ export default function AnimationRenderer({ code, title, description, className 
   }, [code]);
 
   const togglePlay = () => {
-    if (!iframeRef.current) return;
+    if (!iframeRef.current?.contentWindow) return;
     try {
-      const p5Inst = iframeRef.current.contentWindow;
-      if (isPlaying) {
-        p5Inst.noLoop?.();
-      } else {
-        p5Inst.loop?.();
-      }
+      iframeRef.current.contentWindow.postMessage(
+        { type: 'animation-control', action: isPlaying ? 'pause' : 'play' },
+        '*'
+      );
       setIsPlaying(!isPlaying);
     } catch {
-      // Cross-origin restrictions — can't control p5 directly
+      // Ignore control failures and keep current state.
     }
   };
 
@@ -197,7 +206,7 @@ export default function AnimationRenderer({ code, title, description, className 
           {/* Iframe with fade-in */}
           <iframe
             ref={iframeRef}
-            sandbox="allow-scripts allow-same-origin"
+            sandbox="allow-scripts"
             className={`w-full border-0 bg-white dark:bg-white transition-opacity duration-500 ease-out ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
             style={{ height: '380px' }}
             title={title || 'Educational Animation'}

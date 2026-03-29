@@ -6,7 +6,7 @@ export const metadata = {
   keywords: 'homework solver, NCERT solutions, JEE preparation, NEET preparation, AI tutor, CBSE, ICSE, Indian students, DoubtMaster AI',
   openGraph: {
     title: 'DoubtMaster AI - Clear Doubts. Think Better.',
-    description: 'India\'s smartest AI homework solver. Unlimited free NCERT solutions. JEE/NEET prep at just Rs.49/month.',
+    description: 'India\'s smartest AI homework solver. Unlimited free NCERT solutions. JEE/NEET prep at just Rs.199/month.',
     type: 'website',
     locale: 'en_IN',
     siteName: 'DoubtMaster AI',

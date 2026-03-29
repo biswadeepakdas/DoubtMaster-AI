@@ -176,7 +176,7 @@ Rules:
       <div className="max-h-80 overflow-y-auto p-4 space-y-3 bg-white dark:bg-slate-900">
         {messages.length === 0 && (
           <div className="text-center py-4">
-            <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">Ask anything about this solution</p>
+            <p className="text-sm text-gray-600 dark:text-gray-500 mb-3">Ask anything about this solution</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {suggestions.map((s) => (
                 <button

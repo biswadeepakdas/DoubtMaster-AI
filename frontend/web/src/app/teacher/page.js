@@ -198,7 +198,7 @@ export default function TeacherDashboard() {
                               </div>
                               <div>
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{s.name || 'Unknown'}</p>
-                                <p className="text-xs text-gray-400">{s.email || s.phone || ''}</p>
+                                <p className="text-xs text-gray-500">{s.email || s.phone || ''}</p>
                               </div>
                             </div>
                           </td>

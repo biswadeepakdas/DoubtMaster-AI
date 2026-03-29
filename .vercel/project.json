@@ -1,1 +1,16 @@
-{"projectId":"prj_IElnhora7ASjRGm2OKTClaZZQFvv","orgId":"team_4WogrwM0s5xCXIqUGhzXU38v","projectName":"doubt-master-ai"}
+{
+  "projectId": "prj_IElnhora7ASjRGm2OKTClaZZQFvv",
+  "orgId": "team_4WogrwM0s5xCXIqUGhzXU38v",
+  "projectName": "doubt-master-ai",
+  "settings": {
+    "createdAt": 1773872868596,
+    "framework": "nextjs",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": "frontend/web",
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

@@ -35,7 +35,7 @@ export default function Pricing() {
         </div>
 
         {/* Plans */}
-        <div className="grid md:grid-cols-3 gap-6 mb-10">
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
           {/* Free */}
           <div className="bg-white border border-gray-200 rounded-2xl p-8">
             <h2 className="text-lg font-bold text-gray-900 mb-1">Free (Muft)</h2>
@@ -54,7 +54,7 @@ export default function Pricing() {
               ].map(([included, text]) => (
                 <li
                   key={text}
-                  className={`flex items-center gap-2 ${included ? 'text-gray-700' : 'text-gray-400'}`}
+                  className={`flex items-center gap-2 ${included ? 'text-gray-700' : 'text-gray-500'}`}
                 >
                   {included
                     ? <Check size={16} className="text-emerald-500 shrink-0" />
@@ -72,13 +72,13 @@ export default function Pricing() {
           </div>
 
           {/* Pro */}
-          <div className="bg-white border-2 border-teal-500 rounded-2xl p-8 relative">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-4 py-1 rounded-full text-xs font-bold shadow">
-              MOST POPULAR
+          <div className="bg-white border-2 border-blue-600 rounded-2xl p-8 relative overflow-visible">
+            <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border-2 border-white bg-indigo-600 px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-md ring-2 ring-indigo-600/30">
+              Most popular
             </div>
             <h2 className="text-lg font-bold text-gray-900 mb-1">Pro (Topper)</h2>
             <div className="mt-3 mb-6">
-              <span className="text-4xl font-extrabold text-gray-900">&#8377;49</span>
+              <span className="text-4xl font-extrabold text-gray-900">&#8377;199</span>
               <span className="ml-1 text-gray-500">/month</span>
             </div>
             <ul className="space-y-3 text-sm mb-8">
@@ -101,39 +101,35 @@ export default function Pricing() {
               onClick={() => handleSubscribe('pro')}
               className="block w-full text-center bg-gradient-to-r from-teal-500 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-teal-500/25 transition-all"
             >
-              Subscribe — &#8377;49/month
+              Subscribe — &#8377;199/month
             </button>
           </div>
+        </div>
 
-          {/* Champion */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-8">
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Pro+ (Champion)</h2>
-            <div className="mt-3 mb-6">
-              <span className="text-4xl font-extrabold text-gray-900">&#8377;99</span>
-              <span className="ml-1 text-gray-500">/month</span>
-            </div>
-            <ul className="space-y-3 text-sm mb-8">
-              {[
-                'Everything in Pro',
-                'Live doubt chat',
-                'Personalized study plan',
-                'Parent weekly reports',
-                'AR equation scanner',
-                'Priority support',
-              ].map((text) => (
-                <li key={text} className="flex items-center gap-2 text-gray-700">
-                  <Check size={16} className="text-emerald-500 shrink-0" />
-                  {text}
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={() => handleSubscribe('champion')}
-              className="block w-full text-center bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
-            >
-              Subscribe — &#8377;99/month
-            </button>
+        {/* Premium Coming Soon */}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-8 mb-10">
+          <div className="flex flex-wrap items-center gap-3 mb-3">
+            <h2 className="text-lg font-bold text-gray-900">Premium (Coming Soon)</h2>
+            <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+              EARLY ACCESS SOON
+            </span>
           </div>
+          <p className="text-sm text-gray-600 mb-4">
+            We are preparing advanced options for serious exam prep. You will be able to pick a Premium variant soon.
+          </p>
+          <ul className="grid sm:grid-cols-2 gap-2 text-sm text-gray-700">
+            {[
+              'Live doubt chat',
+              'Personalized study plans',
+              'Parent weekly reports',
+              'Advanced analytics and insights',
+            ].map((text) => (
+              <li key={text} className="flex items-center gap-2">
+                <Check size={16} className="text-emerald-600 shrink-0" />
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Back link */}

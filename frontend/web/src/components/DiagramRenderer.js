@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import DOMPurify from 'dompurify';
 
 /**
  * Renders Mermaid.js diagrams from code strings.
@@ -26,17 +27,18 @@ export default function DiagramRenderer({ code, className = '' }) {
           startOnLoad: false,
           theme: 'base',
           themeVariables: {
-            primaryColor: '#CCFBF1',
-            primaryTextColor: '#134E4A',
-            primaryBorderColor: '#14B8A6',
-            lineColor: '#64748B',
-            secondaryColor: '#F0FDF4',
+            primaryColor: '#DBEAFE',
+            primaryTextColor: '#0F172A',
+            primaryBorderColor: '#2563EB',
+            lineColor: '#60A5FA',
+            secondaryColor: '#E0F2FE',
             tertiaryColor: '#F8FAFC',
             fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: '14px',
-            nodeBorder: '#14B8A6',
-            mainBkg: '#CCFBF1',
-            clusterBkg: '#F0FDF4',
+            fontSize: '16px',
+            nodeBorder: '#2563EB',
+            mainBkg: '#DBEAFE',
+            clusterBkg: '#E0F2FE',
+            edgeLabelBackground: '#0F172A',
           },
           flowchart: {
             htmlLabels: true,
@@ -45,13 +47,36 @@ export default function DiagramRenderer({ code, className = '' }) {
             nodeSpacing: 40,
             rankSpacing: 50,
           },
-          securityLevel: 'loose',
+          securityLevel: 'strict',
         });
 
         const id = 'mermaid-' + Math.random().toString(36).slice(2, 9);
         const { svg: renderedSvg } = await mermaid.render(id, mermaidCode);
+        // Improve readability of small edge labels and node text.
+        const readabilityTweaks = renderedSvg.replace(
+          '</style>',
+          `
+          .edgeLabel, .edgeLabel p {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            color: #F8FAFC !important;
+            fill: #F8FAFC !important;
+          }
+          .label, .nodeLabel, .label text {
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            fill: #0F172A !important;
+          }
+          </style>`
+        );
         if (!cancelled) {
-          setSvg(renderedSvg);
+          setSvg(
+            DOMPurify.sanitize(readabilityTweaks, {
+              USE_PROFILES: { svg: true, svgFilters: true },
+              ADD_TAGS: ['style'],
+              ADD_ATTR: ['class', 'id', 'style', 'transform'],
+            })
+          );
           setError('');
         }
       } catch (err) {
@@ -64,8 +89,30 @@ export default function DiagramRenderer({ code, className = '' }) {
             const mermaid = (await import('mermaid')).default;
             const id2 = 'mermaid-retry-' + Math.random().toString(36).slice(2, 9);
             const { svg: retrySvg } = await mermaid.render(id2, stripped);
+            const retryReadabilityTweaks = retrySvg.replace(
+              '</style>',
+              `
+              .edgeLabel, .edgeLabel p {
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                color: #F8FAFC !important;
+                fill: #F8FAFC !important;
+              }
+              .label, .nodeLabel, .label text {
+                font-size: 15px !important;
+                font-weight: 600 !important;
+                fill: #0F172A !important;
+              }
+              </style>`
+            );
             if (!cancelled) {
-              setSvg(retrySvg);
+              setSvg(
+                DOMPurify.sanitize(retryReadabilityTweaks, {
+                  USE_PROFILES: { svg: true, svgFilters: true },
+                  ADD_TAGS: ['style'],
+                  ADD_ATTR: ['class', 'id', 'style', 'transform'],
+                })
+              );
               setError('');
               return;
             }

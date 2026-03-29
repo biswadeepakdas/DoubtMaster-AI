@@ -3,7 +3,7 @@
 import json
 import logging
 import math
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
@@ -32,48 +32,170 @@ SOLVE_SYSTEM = (
     '"diagram":"",'
     '"animation":{"code":"","title":"","description":""}}'
     "\n\nRules for diagram and animation fields:\n"
-    "- diagram: Include valid Mermaid.js code ONLY for Biology (cell diagrams, processes), "
-    "Chemistry (reaction diagrams), or when a flowchart aids understanding. "
-    "Leave empty string '' for Math/Physics pure calculations.\n"
-    "- animation.code: Include valid p5.js code ONLY for Math (graphs, geometry), "
-    "Physics (motion, waves, optics), or visual concepts. "
-    "The p5.js code must define setup() and draw() functions. "
-    "Canvas size: createCanvas(400, 300). Use simple, clear visuals. "
-    "Leave empty string '' if not applicable.\n"
+    "- Prefer complete step-by-step JSON first.\n"
+    "- Add a visual aid when it genuinely improves understanding (especially Physics/Chemistry/Biology flow/process questions).\n"
+    "- diagram: concise Mermaid only when useful. Max 12 lines.\n"
+    "- animation.code: concise p5.js only when useful. Max 20 lines.\n"
+    "- If space is limited, keep detailed steps and set diagram/animation to ''.\n"
     "- animation.title: short title like 'Projectile Motion' or leave ''\n"
     "- animation.description: one sentence explaining the animation, or ''"
 )
 
+RETRY_COMPACT_SYSTEM = (
+    "You are an expert CBSE/ICSE tutor for Indian students (grades 6-12). "
+    "Return ONLY valid JSON (no markdown, no extra text) with this exact structure:\n"
+    '{"subject":"General","confidence":0.95,'
+    '"steps":[{"step":1,"title":"...","content":"...","formula":"","explanation":""}],'
+    '"finalAnswer":"...","conceptSummary":"...","conceptTags":["..."],'
+    '"alternativeMethod":"",'
+    '"diagram":"",'
+    '"animation":{"code":"","title":"","description":""}}'
+    "\nRules:\n"
+    "- Prioritize complete valid JSON over detail.\n"
+    "- Keep 4-8 steps.\n"
+    "- Keep each content and explanation concise.\n"
+    "- ALWAYS set diagram to ''.\n"
+    "- ALWAYS set animation.code, animation.title, animation.description to ''.\n"
+    "- Never include Mermaid or p5 code."
+)
 
-def _parse_solution(raw: str) -> dict:
-    """Parse LLM JSON response, with fallback for non-JSON output."""
+
+def _normalize_solution(data: dict[str, Any]) -> dict[str, Any]:
+    """Ensure the solution object shape is stable for frontend rendering."""
+    normalized = dict(data) if isinstance(data, dict) else {}
+    steps = normalized.get("steps", [])
+
+    if isinstance(steps, str):
+        steps = [{
+            "step": 1,
+            "stepNumber": 1,
+            "title": "Solution",
+            "content": steps,
+            "formula": "",
+            "explanation": "",
+        }]
+    elif not isinstance(steps, list):
+        steps = []
+
+    cleaned_steps: list[dict[str, Any]] = []
+    for idx, item in enumerate(steps, start=1):
+        if isinstance(item, dict):
+            step_no = item.get("stepNumber", item.get("step", idx))
+            cleaned_steps.append({
+                "step": step_no,
+                "stepNumber": step_no,
+                "title": str(item.get("title", f"Step {idx}")),
+                "content": str(item.get("content", "")),
+                "formula": str(item.get("formula", "")),
+                "explanation": str(item.get("explanation", "")),
+                "commonMistake": str(item.get("commonMistake", "")),
+                "tip": str(item.get("tip", "")),
+            })
+        else:
+            cleaned_steps.append({
+                "step": idx,
+                "stepNumber": idx,
+                "title": f"Step {idx}",
+                "content": str(item),
+                "formula": "",
+                "explanation": "",
+                "commonMistake": "",
+                "tip": "",
+            })
+
+    normalized["steps"] = cleaned_steps
+    normalized["subject"] = str(normalized.get("subject", "General"))
+    normalized["confidence"] = float(normalized.get("confidence", 0.8) or 0.8)
+    normalized["finalAnswer"] = str(normalized.get("finalAnswer", ""))
+    normalized["conceptSummary"] = str(normalized.get("conceptSummary", ""))
+    tags = normalized.get("conceptTags", [])
+    normalized["conceptTags"] = tags if isinstance(tags, list) else []
+    normalized["alternativeMethod"] = str(normalized.get("alternativeMethod", ""))
+    normalized["diagram"] = str(normalized.get("diagram", "") or "")
+    anim = normalized.get("animation", {})
+    if isinstance(anim, dict):
+        normalized["animation"] = {
+            "code": str(anim.get("code", "") or ""),
+            "title": str(anim.get("title", "") or ""),
+            "description": str(anim.get("description", "") or ""),
+        }
+    else:
+        normalized["animation"] = {"code": "", "title": "", "description": ""}
+    return normalized
+
+
+def _try_parse_json(raw: str) -> Optional[dict[str, Any]]:
+    """Parse first JSON object from a possibly noisy model response."""
+    clean = (raw or "").strip()
+    if not clean:
+        return None
+
     import re
-    clean = raw.strip()
 
-    # Try 1: direct JSON parse
+    # Normalize partial markdown fences like ```json ... (without closing ```).
+    clean = re.sub(r"^\s*```(?:json)?\s*", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"\s*```\s*$", "", clean)
+
+    decoder = json.JSONDecoder()
+
+    # Try direct parse first.
     try:
-        return json.loads(clean)
+        parsed, _ = decoder.raw_decode(clean)
+        if isinstance(parsed, dict):
+            return parsed
     except Exception:
         pass
 
-    # Try 2: extract from markdown code fence ```json ... ```
-    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean, re.DOTALL)
+    # Try fenced blocks.
+    fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", clean, re.IGNORECASE)
     if fence_match:
+        fenced = fence_match.group(1).strip()
         try:
-            return json.loads(fence_match.group(1))
+            parsed, _ = decoder.raw_decode(fenced)
+            if isinstance(parsed, dict):
+                return parsed
         except Exception:
             pass
 
-    # Try 3: find the first { ... } JSON object anywhere in the text
-    brace_match = re.search(r"\{.*\}", clean, re.DOTALL)
-    if brace_match:
+    # Try from first object start.
+    first_brace = clean.find("{")
+    if first_brace != -1:
         try:
-            return json.loads(brace_match.group(0))
+            parsed, _ = decoder.raw_decode(clean[first_brace:])
+            if isinstance(parsed, dict):
+                return parsed
         except Exception:
             pass
+
+    # Truncation-repair: long responses are often cut inside animation payloads.
+    repaired = clean
+    first_obj_start = repaired.find("{")
+    if first_obj_start != -1:
+        repaired = repaired[first_obj_start:]
+    if '"animation"' in repaired:
+        repaired = re.sub(
+            r'"animation"\s*:\s*\{[\s\S]*$',
+            '"animation":{"code":"","title":"","description":""}}',
+            repaired,
+        )
+        try:
+            parsed, _ = decoder.raw_decode(repaired)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+
+    return None
+
+
+def _parse_solution(raw: str) -> dict:
+    """Parse LLM JSON response, with fallback for non-JSON output."""
+    parsed = _try_parse_json(raw)
+    if parsed is not None:
+        return _normalize_solution(parsed)
 
     # Fallback: wrap raw text as a single step
-    return {
+    return _normalize_solution({
         "subject": "General",
         "confidence": 0.8,
         "steps": [{"step": 1, "title": "Solution", "content": raw, "formula": ""}],
@@ -81,7 +203,21 @@ def _parse_solution(raw: str) -> dict:
         "conceptSummary": "",
         "conceptTags": [],
         "alternativeMethod": "",
-    }
+    })
+
+
+def _is_poor_solution_shape(solution: dict[str, Any]) -> bool:
+    steps = solution.get("steps", [])
+    if not isinstance(steps, list) or len(steps) == 0:
+        return True
+    if len(steps) == 1:
+        first = steps[0] if isinstance(steps[0], dict) else {}
+        is_fallback = (
+            str(first.get("title", "")).strip().lower() == "solution"
+            and str(solution.get("subject", "General")).strip().lower() == "general"
+        )
+        return is_fallback
+    return False
 
 
 # ── Text solve ────────────────────────────────────────────────────────────────
@@ -105,8 +241,15 @@ async def text_solve(
         raise HTTPException(400, "Question too short")
 
     # Call LLM
-    resp = await llm_router.call("homework_solve", SOLVE_SYSTEM, body.textQuestion, max_tokens=2048)
+    resp = await llm_router.call("homework_solve", SOLVE_SYSTEM, body.textQuestion, max_tokens=4096)
     solution = _parse_solution(resp.content)
+    finish_reason = (resp.finish_reason or "").lower() if getattr(resp, "finish_reason", None) else ""
+    if finish_reason in {"length", "max_tokens"} or _is_poor_solution_shape(solution):
+        retry_resp = await llm_router.call("homework_solve", RETRY_COMPACT_SYSTEM, body.textQuestion, max_tokens=4096)
+        retry_solution = _parse_solution(retry_resp.content)
+        if len(retry_solution.get("steps", [])) >= len(solution.get("steps", [])):
+            resp = retry_resp
+            solution = retry_solution
 
     subject = solution.get("subject", "General")
 
@@ -297,12 +440,16 @@ async def image_solve(
         "Return ONLY valid JSON (no markdown): "
         '{"extractedText":"...","subject":"Math","confidence":0.95,'
         '"steps":[{"step":1,"title":"...","content":"...","formula":"","explanation":""}],'
-        '"finalAnswer":"...","conceptSummary":"...","conceptTags":["..."],"alternativeMethod":""}'
+        '"finalAnswer":"...","conceptSummary":"...","conceptTags":["..."],"alternativeMethod":"",'
+        '"diagram":"",'
+        '"animation":{"code":"","title":"","description":""}}'
+        " Add a concise diagram or animation only when it helps understanding. "
+        "If uncertain, keep diagram/animation empty."
     )
 
     message = await client.messages.create(
         model="claude-sonnet-4-5",
-        max_tokens=2048,
+        max_tokens=4096,
         messages=[{
             "role": "user",
             "content": [
@@ -321,6 +468,31 @@ async def image_solve(
 
     raw = message.content[0].text
     solution = _parse_solution(raw)
+    if _is_poor_solution_shape(solution):
+        retry_message = await client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=4096,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": content_type,
+                            "data": b64_image,
+                        },
+                    },
+                    {
+                        "type": "text",
+                        "text": RETRY_COMPACT_SYSTEM + "\n\nQuestion extracted from image. Return complete JSON.",
+                    },
+                ],
+            }],
+        )
+        retry_solution = _parse_solution(retry_message.content[0].text)
+        if len(retry_solution.get("steps", [])) >= len(solution.get("steps", [])):
+            solution = retry_solution
     extracted_text = solution.pop("extractedText", "Image question")
     subject = solution.get("subject", "General")
 

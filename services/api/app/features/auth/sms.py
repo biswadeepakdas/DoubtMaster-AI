@@ -23,8 +23,8 @@ async def send_otp_sms(phone: str, otp: str) -> bool:
         digits = digits[2:]
 
     if not settings.FAST2SMS_API_KEY:
-        # Dev fallback — OTP visible in Railway logs only
-        logger.info("SMS not configured. OTP for %s: %s", phone, otp)
+        # Dev fallback — do not log OTP values.
+        logger.info("SMS not configured. OTP generation requested for %s", phone)
         return True
 
     try:

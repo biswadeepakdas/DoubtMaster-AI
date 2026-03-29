@@ -44,6 +44,7 @@ class LLMResponse:
     output_tokens: int
     cache_hit:     bool
     latency_ms:    int
+    finish_reason: Optional[str] = None
 
 
 # ── Stable system prompt constants (DeepSeek cache anchors) ──────────────────
@@ -179,6 +180,7 @@ async def _call_t1(sys: str, usr: str, max_tok: int) -> dict:
         "input_tokens":  u.prompt_tokens     if u else 0,
         "output_tokens": u.completion_tokens if u else 0,
         "cache_hit":     False,
+        "finish_reason": getattr(r.choices[0], "finish_reason", None),
     }
 
 
@@ -198,6 +200,7 @@ async def _call_t2(sys: str, usr: str, max_tok: int) -> dict:
         "input_tokens":  u.prompt_tokens     if u else 0,
         "output_tokens": u.completion_tokens if u else 0,
         "cache_hit":     cache_hit,
+        "finish_reason": getattr(r.choices[0], "finish_reason", None),
     }
 
 
@@ -213,6 +216,7 @@ async def _call_t3(sys: str, usr: str, max_tok: int) -> dict:
         "input_tokens":  u.input_tokens  if u else 0,
         "output_tokens": u.output_tokens if u else 0,
         "cache_hit":     False,
+        "finish_reason": getattr(r, "stop_reason", None),
     }
 
 

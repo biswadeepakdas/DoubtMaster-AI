@@ -55,10 +55,18 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         request_id             = str(uuid.uuid4())
         request.state.request_id = request_id
 
-        # Block requests without content type on POST/PUT/PATCH
+        # Block requests without expected content type on JSON API routes.
+        # Keep multipart open for file-upload endpoints.
         if request.method in ("POST", "PUT", "PATCH"):
             ct = request.headers.get("content-type", "")
-            if not ct.startswith("application/json") and request.url.path.startswith("/api/"):
+            path = request.url.path
+            is_api_route = path.startswith("/api/") or path.startswith("/questions/")
+            is_json = ct.startswith("application/json")
+            is_multipart = ct.startswith("multipart/form-data")
+
+            # Enforce known content types on API mutating routes.
+            # Allow multipart to support file upload endpoints behind varying proxies.
+            if is_api_route and not (is_json or is_multipart):
                 return Response(
                     content='{"detail":"Content-Type must be application/json"}',
                     status_code=415, media_type="application/json",

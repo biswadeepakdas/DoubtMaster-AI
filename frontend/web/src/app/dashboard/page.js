@@ -216,6 +216,14 @@ export default function DashboardPage() {
     }
   }, [darkMode]);
 
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('dm-token');
+      localStorage.removeItem('dm-refresh-token');
+      router.replace('/login');
+    }
+  };
+
   // Solve question via API
   const handleSolve = async () => {
     setSolveError('');
@@ -542,6 +550,18 @@ export default function DashboardPage() {
               <Bell size={18} />
             </button>
 
+            <button
+              onClick={handleLogout}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                darkMode
+                  ? 'text-red-300 hover:bg-red-500/10 border border-red-500/20'
+                  : 'text-red-600 hover:bg-red-50 border border-red-200'
+              }`}
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+
             {/* Avatar */}
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
               darkMode ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-600'
@@ -569,6 +589,7 @@ export default function DashboardPage() {
                 // { icon: FileText, label: 'Mock Tests', active: false, action: () => { setSidebarOpen(false); router.push('/mock-tests'); } },
                 { icon: GraduationCap, label: 'Teacher', active: false, action: () => { setSidebarOpen(false); router.push('/teacher'); } },
                 { icon: Settings, label: 'Settings', active: false, action: () => { setSidebarOpen(false); router.push('/settings'); } },
+                { icon: LogOut, label: 'Logout', active: false, action: () => { setSidebarOpen(false); handleLogout(); } },
               ].map(({ icon: Icon, label, active, action }) => (
                 <button
                   key={label}
@@ -667,8 +688,12 @@ export default function DashboardPage() {
                     className="hidden"
                     onChange={(e) => { setSelectedFile(e.target.files?.[0] || null); setSolveError(''); }}
                   />
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/20">
-                    <Camera size={28} className="text-white" />
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
+                    darkMode
+                      ? 'bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-500/20'
+                      : 'bg-blue-600 shadow-lg shadow-blue-500/20'
+                  }`}>
+                    <Camera size={28} className={darkMode ? 'text-white' : 'text-blue-50'} />
                   </div>
                   {selectedFile ? (
                     <p className={`font-medium mb-1 ${darkMode ? 'text-teal-300' : 'text-teal-700'}`}>
@@ -679,7 +704,7 @@ export default function DashboardPage() {
                       <p className={`font-medium mb-1 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                         Tap to snap or upload a photo
                       </p>
-                      <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         Supports handwritten & printed questions in 11 languages
                       </p>
                     </>
@@ -1177,24 +1202,38 @@ export default function DashboardPage() {
 
         {/* ========== UPGRADE BANNER (for free users) ========== */}
         {userPlan === 'free' && (
-          <div className="rounded-2xl p-6 sm:p-8 bg-gradient-to-r from-teal-500 to-emerald-600 relative overflow-hidden animate-fade-in-up delay-600">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+          <div className={`rounded-2xl p-6 sm:p-8 relative overflow-hidden animate-fade-in-up delay-600 ${
+            darkMode
+              ? 'bg-gradient-to-r from-teal-500 to-emerald-600'
+              : 'bg-gradient-to-r from-blue-100 to-indigo-100 border border-blue-200'
+          }`}>
+            <div className={`absolute top-0 right-0 w-48 h-48 rounded-full -translate-y-1/2 translate-x-1/2 ${
+              darkMode ? 'bg-white/5' : 'bg-blue-400/10'
+            }`} />
+            <div className={`absolute bottom-0 left-0 w-32 h-32 rounded-full translate-y-1/2 -translate-x-1/2 ${
+              darkMode ? 'bg-white/5' : 'bg-indigo-400/10'
+            }`} />
             <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
-                  <Crown size={24} className="text-amber-300" />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  darkMode ? 'bg-white/10' : 'bg-white'
+                }`}>
+                  <Crown size={24} className={darkMode ? 'text-amber-300' : 'text-amber-500'} />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold text-lg">Upgrade to Pro (Topper)</h3>
-                  <p className="text-teal-200 text-sm">
-                    Unlimited JEE/NEET solves, Learn Mode, offline access & more -- just &#8377;49/month
+                  <h3 className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-slate-900'}`}>Upgrade to Pro (Topper)</h3>
+                  <p className={`text-sm ${darkMode ? 'text-blue-100' : 'text-slate-700'}`}>
+                    Unlimited JEE/NEET solves, Learn Mode, offline access & more -- just &#8377;199/month
                   </p>
                 </div>
               </div>
               <a
                 href="/pricing"
-                className="shrink-0 bg-white text-teal-600 px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all shadow-lg flex items-center gap-2"
+                className={`shrink-0 px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center gap-2 ${
+                  darkMode
+                    ? 'bg-white text-teal-600 hover:bg-gray-50'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
                 Upgrade Now <ArrowRight size={16} />
               </a>

@@ -73,7 +73,6 @@ const ANIMATION_WEDGE_MODE = false;
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [annual, setAnnual] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Counters
@@ -126,7 +125,7 @@ export default function LandingPage() {
     { icon: Target, title: 'JEE/NEET Deep Solve', desc: 'NCERT + PYQ coverage. Concept tagging, alternative methods, and AI-powered accuracy.', color: 'from-teal-500 to-teal-500' },
     { icon: BarChart3, title: 'Smart Progress', desc: 'AI detects your weak topics. Daily streak, subject mastery, personalized practice.', color: 'from-cyan-500 to-blue-500' },
     { icon: School, title: 'Teacher Dashboard', desc: 'Schools get free analytics. See which students need help. Anti-cheating watermarks.', color: 'from-green-500 to-emerald-500' },
-    { icon: IndianRupee, title: 'India-Priced', desc: "Free NCERT forever. Pro at just Rs.49/month. 25x cheaper than the competition. Real value.", color: 'from-amber-500 to-yellow-500' },
+    { icon: IndianRupee, title: 'India-Priced', desc: "Free NCERT forever. Pro at just Rs.199/month. Built for real student outcomes.", color: 'from-amber-500 to-yellow-500' },
   ];
 
   const steps = [
@@ -236,10 +235,10 @@ export default function LandingPage() {
             {/* Left text */}
             <div className="text-center lg:text-left">
               <div className="flex justify-center lg:justify-start mb-6 animate-fade-in-up">
-                <img src="/logo-dark.jpg" alt="DoubtMaster AI" className="h-24 w-auto rounded-2xl shadow-xl shadow-teal-500/20" />
+                <img src="/logo-dark.jpg" alt="DoubtMaster AI" className="h-24 w-auto rounded-2xl shadow-xl shadow-blue-500/20" />
               </div>
 
-              <div className="inline-flex items-center gap-2 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 px-4 py-2 rounded-full text-sm font-medium mb-6 animate-fade-in-up">
+              <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-200 px-4 py-2 rounded-full text-sm font-semibold mb-6 animate-fade-in-up shadow-sm">
                 <GraduationCap size={16} />
                 <span>Designed for CBSE, ICSE &amp; State Boards</span>
               </div>
@@ -248,9 +247,9 @@ export default function LandingPage() {
                 darkMode ? 'text-white' : 'text-gray-900'
               }`}>
                 {ANIMATION_WEDGE_MODE ? (
-                  <>See the Physics.{' '}<br className="hidden sm:block" /><span className="gradient-text">Don&#39;t Just Read It.</span></>
+                  <>See the Physics.{' '}<br className="hidden sm:block" /><span className="gradient-text-hero">Don&#39;t Just Read It.</span></>
                 ) : (
-                  <>Clear Doubts.{' '}<br className="hidden sm:block" /><span className="gradient-text">Think Better.</span></>
+                  <>Clear Doubts.{' '}<br className="hidden sm:block" /><span className="gradient-text-hero">Think Better.</span></>
                 )}
               </h1>
 
@@ -266,7 +265,7 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-6 animate-fade-in-up delay-300">
                 <a
                   href="/signup"
-                  className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:shadow-xl hover:shadow-teal-500/25 transition-all duration-300 hover:-translate-y-1"
+                  className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-sky-600 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:shadow-xl hover:shadow-indigo-500/25 transition-all duration-300 hover:-translate-y-1"
                 >
                   {ANIMATION_WEDGE_MODE ? 'Try It Free' : 'Start Solving Free'}
                   <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -286,7 +285,7 @@ export default function LandingPage() {
                 )}
               </div>
 
-              <p className={`text-sm animate-fade-in-up delay-400 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              <p className={`text-sm animate-fade-in-up delay-400 ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
                 No credit card required. Unlimited NCERT solutions free forever.
               </p>
             </div>
@@ -296,7 +295,7 @@ export default function LandingPage() {
               <div className="relative">
                 {/* Phone frame */}
                 <div className={`w-[280px] h-[560px] rounded-[3rem] border-4 p-3 shadow-2xl animate-float ${
-                  darkMode ? 'border-slate-600 bg-slate-800 shadow-teal-500/10' : 'border-gray-200 bg-white shadow-teal-500/10'
+                  darkMode ? 'border-slate-600 bg-slate-800 shadow-indigo-500/10' : 'border-gray-200 bg-white shadow-indigo-500/10'
                 }`}>
                   {/* Status bar */}
                   <div className={`flex items-center justify-between px-4 py-2 text-xs ${
@@ -306,35 +305,35 @@ export default function LandingPage() {
                     <div className="flex gap-1">
                       <Wifi size={12} />
                       <div className="w-6 h-3 rounded-sm border border-current relative">
-                        <div className="absolute inset-0.5 right-1 bg-green-500 rounded-sm" />
+                      <div className="absolute inset-0.5 right-1 bg-blue-500 rounded-sm" />
                       </div>
                     </div>
                   </div>
                   {/* App content mockup */}
                   <div className={`rounded-2xl p-4 h-full ${darkMode ? 'bg-slate-900' : 'bg-gray-50'}`}>
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="w-6 h-6 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-lg" />
+                      <div className="w-6 h-6 bg-gradient-to-br from-indigo-600 to-sky-600 rounded-lg" />
                       <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>DoubtMaster AI</span>
                     </div>
                     {/* Mock question card */}
                     <div className={`rounded-xl p-3 mb-3 ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-sm`}>
-                      <div className={`text-xs font-medium mb-1 ${darkMode ? 'text-teal-400' : 'text-teal-600'}`}>Mathematics - Ch 3</div>
+                      <div className={`text-xs font-medium mb-1 ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>Mathematics - Ch 3</div>
                       <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Find the value of x in: 2x + 5 = 15</div>
                     </div>
                     {/* Mock step */}
-                    <div className={`rounded-xl p-3 mb-3 border-l-4 border-teal-500 ${darkMode ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
-                      <div className={`text-xs font-bold mb-1 ${darkMode ? 'text-teal-300' : 'text-teal-700'}`}>Step 1</div>
+                    <div className={`rounded-xl p-3 mb-3 border-l-4 border-indigo-500 ${darkMode ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
+                      <div className={`text-xs font-bold mb-1 ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Step 1</div>
                       <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>2x + 5 = 15</div>
                       <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>2x = 15 - 5 = 10</div>
                     </div>
-                    <div className={`rounded-xl p-3 mb-3 border-l-4 border-emerald-500 ${darkMode ? 'bg-emerald-500/10' : 'bg-emerald-50'}`}>
-                      <div className={`text-xs font-bold mb-1 ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>Step 2</div>
+                    <div className={`rounded-xl p-3 mb-3 border-l-4 border-sky-500 ${darkMode ? 'bg-sky-500/10' : 'bg-sky-50'}`}>
+                      <div className={`text-xs font-bold mb-1 ${darkMode ? 'text-sky-300' : 'text-sky-700'}`}>Step 2</div>
                       <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>x = 10 / 2</div>
-                      <div className={`text-xs font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>x = 5</div>
+                      <div className={`text-xs font-bold ${darkMode ? 'text-sky-300' : 'text-sky-700'}`}>x = 5</div>
                     </div>
                     {/* Mock camera button */}
                     <div className="flex justify-center mt-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/30">
+                      <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-sky-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
                         <Camera size={24} className="text-white" />
                       </div>
                     </div>
@@ -343,7 +342,7 @@ export default function LandingPage() {
 
                 {/* Floating badges around phone */}
                 <div className={`absolute -top-4 -right-12 px-3 py-2 rounded-xl text-xs font-bold shadow-lg ${
-                  darkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  darkMode ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                 }`}>
                   <div className="flex items-center gap-1"><Check size={12} /> AI-Powered</div>
                 </div>
@@ -353,7 +352,7 @@ export default function LandingPage() {
                   <div className="flex items-center gap-1"><Zap size={12} /> Under 3 sec</div>
                 </div>
                 <div className={`absolute top-1/2 -right-20 px-3 py-2 rounded-xl text-xs font-bold shadow-lg ${
-                  darkMode ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'bg-teal-50 text-teal-700 border border-teal-200'
+                  darkMode ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-sky-50 text-sky-700 border border-sky-200'
                 }`}>
                   <div className="flex items-center gap-1"><Globe size={12} /> 11 Languages</div>
                 </div>
@@ -477,8 +476,12 @@ export default function LandingPage() {
                 >
                   {/* Number circle */}
                   <div className="flex justify-center mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-teal-500/20 relative z-10">
-                      <Icon size={28} className="text-white" />
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center relative z-10 ${
+                      darkMode
+                        ? 'bg-gradient-to-br from-teal-500 to-emerald-600 shadow-xl shadow-teal-500/20'
+                        : 'bg-blue-100 border border-blue-200 shadow-lg shadow-blue-500/10'
+                    }`}>
+                      <Icon size={28} className={darkMode ? 'text-white' : 'text-blue-700'} />
                     </div>
                   </div>
                   <div className={`inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider mb-3 ${
@@ -510,32 +513,14 @@ export default function LandingPage() {
               Designed for Indian families. No hidden fees.
             </p>
 
-            {/* Monthly/Annual toggle */}
-            <div className="inline-flex items-center gap-3 mb-2">
-              <span className={`text-sm font-medium ${!annual ? (darkMode ? 'text-white' : 'text-gray-900') : (darkMode ? 'text-gray-500' : 'text-gray-400')}`}>
-                Monthly
-              </span>
-              <button
-                onClick={() => setAnnual(!annual)}
-                role="switch"
-                aria-checked={annual}
-                aria-label="Toggle annual billing"
-                className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${annual ? 'bg-teal-500' : (darkMode ? 'bg-slate-600' : 'bg-gray-300')}`}
-              >
-                <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${annual ? 'translate-x-[1.875rem]' : 'translate-x-0.5'}`} />
-              </button>
-              <span className={`text-sm font-medium ${annual ? (darkMode ? 'text-white' : 'text-gray-900') : (darkMode ? 'text-gray-500' : 'text-gray-400')}`}>
-                Annual
-              </span>
-              {annual && (
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded-full">
-                  Save up to 33%
-                </span>
-              )}
+            <div className={`inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full ${
+              darkMode ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200'
+            }`}>
+              Premium plans coming soon
             </div>
           </div>
 
-          <div className={`grid md:grid-cols-3 gap-6 ${pricingInView ? '' : ''}`}>
+          <div className={`grid md:grid-cols-2 gap-6 ${pricingInView ? '' : ''}`}>
             {/* Free */}
             <div className={`rounded-2xl p-8 hover-card ${
               pricingInView ? 'animate-fade-in-up delay-100' : 'opacity-0'
@@ -557,7 +542,7 @@ export default function LandingPage() {
                   <li key={text} className={`flex items-center gap-2 ${
                     included
                       ? (darkMode ? 'text-gray-300' : 'text-gray-600')
-                      : (darkMode ? 'text-gray-600' : 'text-gray-400')
+                      : (darkMode ? 'text-gray-600' : 'text-gray-500')
                   }`}>
                     {included
                       ? <Check size={16} className="text-emerald-500 shrink-0" />
@@ -576,21 +561,22 @@ export default function LandingPage() {
             {/* Pro */}
             <div className={`rounded-2xl p-8 relative hover-card ${
               pricingInView ? 'animate-fade-in-up delay-200' : 'opacity-0'
-            } ${darkMode ? 'bg-slate-800/50 border-2 border-teal-500' : 'bg-white border-2 border-teal-500'}`}>
-              <div className="absolute -top-3.5 left-1/2 badge-pulse bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg">
-                MOST POPULAR
+            } ${darkMode ? 'bg-slate-800/50 border-2 border-teal-500 overflow-visible' : 'bg-white border-2 border-blue-600 overflow-visible'}`}>
+              <div
+                className={`absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-wide shadow-md ${
+                  darkMode
+                    ? 'border-slate-700 bg-indigo-500 text-white'
+                    : 'border-white bg-indigo-600 text-white ring-2 ring-indigo-600/30'
+                }`}
+              >
+                Most popular
               </div>
               <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Pro (Topper)</h3>
               <div className="mt-4 mb-6">
                 <span className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  &#8377;{annual ? '33' : '49'}
+                  &#8377;199
                 </span>
                 <span className={`ml-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>/month</span>
-                {annual && (
-                  <div className="text-sm text-teal-500 font-medium mt-1">
-                    &#8377;399/year (save &#8377;189)
-                  </div>
-                )}
               </div>
               <ul className="space-y-3 text-sm mb-8">
                 {[
@@ -609,47 +595,25 @@ export default function LandingPage() {
                 ))}
               </ul>
               <a href="/signup?plan=pro" className="block w-full text-center bg-gradient-to-r from-teal-500 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300">
-                Start Pro Trial
+                Choose Pro
               </a>
             </div>
+          </div>
 
-            {/* Champion */}
-            <div className={`rounded-2xl p-8 hover-card ${
-              pricingInView ? 'animate-fade-in-up delay-300' : 'opacity-0'
-            } ${darkMode ? 'bg-slate-800/50 border border-slate-700' : 'bg-white border border-gray-200'}`}>
-              <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Pro+ (Champion)</h3>
-              <div className="mt-4 mb-6">
-                <span className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  &#8377;{annual ? '67' : '99'}
-                </span>
-                <span className={`ml-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>/month</span>
-                {annual && (
-                  <div className="text-sm text-amber-500 font-medium mt-1">
-                    &#8377;799/year (save &#8377;389)
-                  </div>
-                )}
-              </div>
-              <ul className="space-y-3 text-sm mb-8">
-                {[
-                  'Everything in Pro',
-                  'Live doubt chat',
-                  'Personalized study plan',
-                  'Parent weekly reports',
-                  'AR equation scanner',
-                  'Priority support',
-                ].map((text) => (
-                  <li key={text} className={`flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    <Check size={16} className="text-emerald-500 shrink-0" />
-                    {text}
-                  </li>
-                ))}
-              </ul>
-              <a href="/signup?plan=champion" className={`block w-full text-center py-3 rounded-xl font-semibold transition-all duration-300 ${
-                darkMode ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          <div className={`mt-6 rounded-2xl p-6 ${
+            darkMode ? 'bg-slate-800/40 border border-amber-500/30' : 'bg-amber-50 border border-amber-200'
+          }`}>
+            <div className="flex flex-wrap items-center gap-3 mb-2">
+              <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Premium (Coming Soon)</h3>
+              <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${
+                darkMode ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700'
               }`}>
-                Start Champion Trial
-              </a>
+                MULTIPLE OPTIONS
+              </span>
             </div>
+            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-sm`}>
+              Advanced options like live doubt chat, personalized study plans, and parent reporting are being prepared.
+            </p>
           </div>
         </div>
       </section>

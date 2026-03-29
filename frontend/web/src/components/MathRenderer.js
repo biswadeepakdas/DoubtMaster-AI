@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import katex from 'katex';
+import DOMPurify from 'dompurify';
 
 /**
  * Renders text with inline LaTeX math expressions.
@@ -16,7 +17,9 @@ import katex from 'katex';
 export default function MathRenderer({ text, className = '' }) {
   const rendered = useMemo(() => {
     if (!text) return '';
-    return renderMathInText(text);
+    return DOMPurify.sanitize(renderMathInText(text), {
+      USE_PROFILES: { html: true, mathMl: true },
+    });
   }, [text]);
 
   return (
@@ -33,7 +36,9 @@ export default function MathRenderer({ text, className = '' }) {
 export function MathBlock({ text, className = '' }) {
   const rendered = useMemo(() => {
     if (!text) return '';
-    return renderMathInText(text);
+    return DOMPurify.sanitize(renderMathInText(text), {
+      USE_PROFILES: { html: true, mathMl: true },
+    });
   }, [text]);
 
   return (
@@ -54,7 +59,7 @@ function renderMathInText(text) {
   // If the entire text looks like LaTeX (environment, or contains LaTeX commands without delimiters)
   if (/^\\begin\{/.test(trimmed) || /^\\\[/.test(trimmed)) {
     try {
-      return katex.renderToString(trimmed, { displayMode: true, throwOnError: false, trust: true });
+      return katex.renderToString(trimmed, { displayMode: true, throwOnError: false, trust: false });
     } catch {
       return escapeHtml(text);
     }
@@ -64,7 +69,7 @@ function renderMathInText(text) {
   // Common patterns: \text{}, \frac{}, \cdot, \sqrt{}, \pm, \times, \div, \leq, \geq, \neq, \alpha, etc.
   if (!text.includes('$') && /\\(?:text|frac|cdot|sqrt|pm|times|div|leq|geq|neq|alpha|beta|gamma|delta|theta|lambda|mu|sigma|pi|infty|sum|prod|int|lim|log|sin|cos|tan|vec|hat|bar|dot|ddot|mathbf|mathrm|mathbb|left|right|binom|tbinom)\b/.test(text)) {
     try {
-      return katex.renderToString(trimmed, { displayMode: false, throwOnError: false, trust: true });
+      return katex.renderToString(trimmed, { displayMode: false, throwOnError: false, trust: false });
     } catch {
       // Fall through to normal parsing
     }
@@ -150,7 +155,7 @@ function renderMathInText(text) {
       parts.push(katex.renderToString(match.latex, {
         displayMode: match.display,
         throwOnError: false,
-        trust: true,
+        trust: false,
       }));
     } catch {
       parts.push(escapeHtml(remaining.substring(match.start, match.end)));

@@ -18,6 +18,7 @@
     "axios": "^1.7.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "dompurify": "^3.3.3",
     "katex": "^0.16.11",
     "lucide-react": "^0.436.0",
     "mermaid": "^11.13.0",

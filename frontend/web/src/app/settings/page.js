@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import {
   Sun, Moon, ArrowLeft, User, Mail, Phone, BookOpen,
   GraduationCap, Globe, Crown, LogOut, Save, Check,
-  AlertTriangle, RefreshCw, ChevronDown
+  AlertTriangle, RefreshCw, ChevronDown, Home, Camera,
+  History, BarChart3, FileText, ChevronRight
 } from 'lucide-react';
 import api from '../../lib/api';
 
@@ -15,6 +16,18 @@ import api from '../../lib/api';
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
 const BOARD_OPTIONS = ['CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE', 'Other'];
 const LANGUAGE_OPTIONS = ['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Malayalam', 'Odia', 'Punjabi'];
+const QUICK_LINKS = [
+  { label: 'Home', href: '/', desc: 'Public landing page', icon: Home },
+  { label: 'Dashboard', href: '/dashboard', desc: 'Daily solve hub', icon: GraduationCap },
+  { label: 'Questions', href: '/questions', desc: 'All solved questions', icon: BookOpen },
+  { label: 'History', href: '/history', desc: 'Recent attempts', icon: History },
+  { label: 'Mock Tests', href: '/mock-tests', desc: 'Practice exams', icon: FileText },
+  { label: 'Progress', href: '/progress', desc: 'Learning analytics', icon: BarChart3 },
+  { label: 'Teacher', href: '/teacher', desc: 'Classroom dashboard', icon: GraduationCap },
+  { label: 'Pricing', href: '/pricing', desc: 'Plans and upgrades', icon: Crown },
+  { label: 'Profile', href: '/profile', desc: 'Profile overview', icon: User },
+  { label: 'Solve (Dashboard Camera)', href: '/dashboard', desc: 'Photo and text solve', icon: Camera },
+];
 
 /* -------------------------------------------------- */
 /* Settings Page                                       */
@@ -209,12 +222,25 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`p-2 rounded-lg ${darkMode ? 'text-yellow-400 hover:bg-slate-800' : 'text-gray-500 hover:bg-gray-100'}`}
-          >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`p-2 rounded-lg ${darkMode ? 'text-yellow-400 hover:bg-slate-800' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              onClick={handleLogout}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors ${
+                darkMode
+                  ? 'text-red-300 hover:bg-red-500/10 border border-red-500/20'
+                  : 'text-red-600 hover:bg-red-50 border border-red-200'
+              }`}
+            >
+              <LogOut size={15} />
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -283,7 +309,7 @@ export default function SettingsPage() {
                   className={`w-full rounded-xl px-4 py-3 text-sm outline-none cursor-not-allowed ${
                     darkMode
                       ? 'bg-slate-900 border border-slate-700 text-gray-500'
-                      : 'bg-gray-50 border border-gray-200 text-gray-400'
+                      : 'bg-gray-50 border border-gray-200 text-gray-600'
                   }`}
                 />
               </div>
@@ -302,7 +328,7 @@ export default function SettingsPage() {
                   className={`w-full rounded-xl px-4 py-3 text-sm outline-none cursor-not-allowed ${
                     darkMode
                       ? 'bg-slate-900 border border-slate-700 text-gray-500'
-                      : 'bg-gray-50 border border-gray-200 text-gray-400'
+                      : 'bg-gray-50 border border-gray-200 text-gray-600'
                   }`}
                 />
               </div>
@@ -427,6 +453,40 @@ export default function SettingsPage() {
                 darkMode ? 'translate-x-5' : 'translate-x-0.5'
               }`} />
             </button>
+          </div>
+        </div>
+
+        {/* ========== QUICK NAVIGATION ========== */}
+        <div className={`rounded-2xl p-6 mb-6 ${
+          darkMode ? 'bg-slate-800/50 border border-slate-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`font-bold text-lg mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Quick Navigation</h3>
+          <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            All important pages available in the app.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {QUICK_LINKS.map(({ label, href, desc, icon: Icon }) => (
+              <button
+                key={label}
+                onClick={() => router.push(href)}
+                className={`text-left rounded-xl p-3 border transition-all flex items-start gap-3 ${
+                  darkMode
+                    ? 'border-slate-700 hover:border-teal-500/40 hover:bg-slate-800'
+                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                }`}
+              >
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                  darkMode ? 'bg-teal-500/10 text-teal-300' : 'bg-blue-100 text-blue-700'
+                }`}>
+                  <Icon size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{label}</p>
+                  <p className={`text-xs truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{desc}</p>
+                </div>
+                <ChevronRight size={15} className={darkMode ? 'text-gray-500' : 'text-gray-400'} />
+              </button>
+            ))}
           </div>
         </div>
 
