@@ -807,7 +807,7 @@ export default function DashboardPage() {
                   onClick={handleSolve}
                   disabled={isSolving}
                   style={{ background: 'linear-gradient(to right, #14b8a6, #059669)', opacity: isSolving ? 0.7 : 1 }}
-                  className="mt-3 w-full text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="mt-3 w-full text-[#1e3a5f] px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSolving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Solving...</> : <><Sparkles size={18} /> Solve with AI</>}
                 </button>
@@ -829,7 +829,7 @@ export default function DashboardPage() {
                   onClick={handleSolve}
                   disabled={isSolving}
                   style={{ background: 'linear-gradient(to right, #14b8a6, #059669)', opacity: isSolving ? 0.7 : 1 }}
-                  className="w-full text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full text-[#1e3a5f] px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSolving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Solving...</> : <><Sparkles size={18} /> Solve with AI</>}
                 </button>
