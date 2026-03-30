@@ -148,9 +148,16 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Auth guard + initial data fetch
+  // Auth guard + initial data fetch + dark mode restore
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Restore dark mode preference before rendering content
+      const savedDark = localStorage.getItem('dm-dark');
+      if (savedDark === 'true') {
+        setDarkMode(true);
+        document.documentElement.classList.add('dark');
+      }
+
       const token = localStorage.getItem('dm-token');
       if (!token) {
         router.replace('/login');
@@ -715,15 +722,13 @@ export default function DashboardPage() {
                     </>
                   )}
                 </label>
-                {selectedFile && (
-                  <button
-                    onClick={handleSolve}
-                    disabled={isSolving}
-                    className="mt-3 w-full sm:w-auto bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-teal-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {isSolving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Solving...</> : <><Sparkles size={18} /> Solve with AI</>}
-                  </button>
-                )}
+                <button
+                  onClick={handleSolve}
+                  disabled={isSolving || !selectedFile}
+                  className="mt-3 w-full sm:w-auto bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-teal-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSolving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Solving...</> : <><Sparkles size={18} /> Solve with AI</>}
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
