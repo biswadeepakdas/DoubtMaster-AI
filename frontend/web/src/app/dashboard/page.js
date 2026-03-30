@@ -806,7 +806,8 @@ export default function DashboardPage() {
                 <button
                   onClick={handleSolve}
                   disabled={isSolving}
-                  className="mt-3 w-full bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-teal-500/25 hover:scale-[1.01] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(to right, #14b8a6, #059669)', opacity: isSolving ? 0.7 : 1 }}
+                  className="mt-3 w-full text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSolving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Solving...</> : <><Sparkles size={18} /> Solve with AI</>}
                 </button>
@@ -827,7 +828,8 @@ export default function DashboardPage() {
                 <button
                   onClick={handleSolve}
                   disabled={isSolving}
-                  className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-teal-500/25 hover:scale-[1.01] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(to right, #14b8a6, #059669)', opacity: isSolving ? 0.7 : 1 }}
+                  className="w-full text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSolving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Solving...</> : <><Sparkles size={18} /> Solve with AI</>}
                 </button>
