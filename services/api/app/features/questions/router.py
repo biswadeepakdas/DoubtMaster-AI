@@ -272,6 +272,25 @@ async def text_solve(
     )
     question_id = str(result.scalar_one())
 
+    # Save solution to DB so history can retrieve it without re-solving
+    import json as _json
+    await db.execute(
+        text("""
+            INSERT INTO solutions (question_id, steps, final_answer, confidence, model_used,
+                                   concept_tags, alternative_method)
+            VALUES (:qid, :steps, :ans, :conf, :model, :tags, :alt)
+        """),
+        {
+            "qid":   question_id,
+            "steps": _json.dumps(solution.get("steps", [])),
+            "ans":   solution.get("finalAnswer", ""),
+            "conf":  solution.get("confidence", 0.95),
+            "model": resp.model if hasattr(resp, "model") else None,
+            "tags":  solution.get("conceptTags", []),
+            "alt":   solution.get("alternativeMethod", ""),
+        },
+    )
+
     # Increment solve_count
     await db.execute(
         text("UPDATE users SET solve_count = solve_count + 1, last_active_at = now() WHERE id = :id"),
@@ -386,9 +405,42 @@ async def get_question(
     if not q:
         raise HTTPException(404, "Question not found")
 
-    # Re-solve to get full solution (stored solution retrieval not yet implemented)
-    resp = await llm_router.call("homework_solve", SOLVE_SYSTEM, q["extractedText"], max_tokens=4096)
-    solution = _parse_solution(resp.content)
+    # Retrieve saved solution from DB (no LLM call needed)
+    sol_result = await db.execute(
+        text("""
+            SELECT steps, final_answer AS "finalAnswer", confidence,
+                   concept_tags AS "conceptTags", alternative_method AS "alternativeMethod"
+            FROM solutions
+            WHERE question_id = :qid
+            ORDER BY created_at DESC
+            LIMIT 1
+        """),
+        {"qid": question_id},
+    )
+    sol = sol_result.mappings().one_or_none()
+
+    if sol:
+        import json as _json
+        raw_steps = sol["steps"]
+        steps = raw_steps if isinstance(raw_steps, list) else _json.loads(raw_steps or "[]")
+        solution = {
+            "steps":             steps,
+            "finalAnswer":       sol["finalAnswer"] or "",
+            "confidence":        float(sol["confidence"] or 0.9),
+            "conceptTags":       sol["conceptTags"] or [],
+            "alternativeMethod": sol["alternativeMethod"] or "",
+        }
+    else:
+        # Fallback: re-solve if no saved solution (old questions pre-this fix)
+        resp = await llm_router.call("homework_solve", SOLVE_SYSTEM, q["extractedText"], max_tokens=4096)
+        parsed = _parse_solution(resp.content)
+        solution = {
+            "steps":             parsed.get("steps", []),
+            "finalAnswer":       parsed.get("finalAnswer", ""),
+            "confidence":        parsed.get("confidence", 0.9),
+            "conceptTags":       parsed.get("conceptTags", []),
+            "alternativeMethod": parsed.get("alternativeMethod", ""),
+        }
 
     return {
         "id":            str(q["id"]),
@@ -396,15 +448,9 @@ async def get_question(
         "subject":       q["subject"],
         "topic":         q["topic"],
         "board":         q["board"],
-        "confidence":    solution.get("confidence", 0.9),
+        "confidence":    solution["confidence"],
         "createdAt":     str(q["createdAt"]),
-        "solution": {
-            "steps":             solution.get("steps", []),
-            "finalAnswer":       solution.get("finalAnswer", ""),
-            "conceptSummary":    solution.get("conceptSummary", ""),
-            "conceptTags":       solution.get("conceptTags", []),
-            "alternativeMethod": solution.get("alternativeMethod", ""),
-        },
+        "solution":      solution,
     }
 
 
@@ -512,6 +558,25 @@ async def image_solve(
         },
     )
     question_id = str(result.scalar_one())
+
+    # Save solution so history retrieval doesn't need to re-solve
+    import json as _json
+    await db.execute(
+        text("""
+            INSERT INTO solutions (question_id, steps, final_answer, confidence, model_used,
+                                   concept_tags, alternative_method)
+            VALUES (:qid, :steps, :ans, :conf, :model, :tags, :alt)
+        """),
+        {
+            "qid":   question_id,
+            "steps": _json.dumps(solution.get("steps", [])),
+            "ans":   solution.get("finalAnswer", ""),
+            "conf":  solution.get("confidence", 0.9),
+            "model": None,
+            "tags":  solution.get("conceptTags", []),
+            "alt":   solution.get("alternativeMethod", ""),
+        },
+    )
 
     await db.execute(
         text("UPDATE users SET solve_count = solve_count + 1, last_active_at = now() WHERE id = :id"),
