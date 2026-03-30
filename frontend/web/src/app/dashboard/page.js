@@ -105,6 +105,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
 
+  // Profile dropdown
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+
   /* ---- Fetch all dashboard data ---- */
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -146,6 +150,17 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Auth guard + initial data fetch + dark mode restore
@@ -557,6 +572,19 @@ export default function DashboardPage() {
               <Bell size={18} />
             </button>
 
+            {/* My Questions — desktop nav link */}
+            <button
+              onClick={() => router.push('/questions')}
+              className={`hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                darkMode
+                  ? 'text-gray-300 hover:bg-slate-800 hover:text-teal-300'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-teal-600'
+              }`}
+            >
+              <BookMarked size={16} />
+              My Questions
+            </button>
+
             <button
               onClick={handleLogout}
               className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -569,16 +597,69 @@ export default function DashboardPage() {
               Logout
             </button>
 
-            {/* Avatar → Profile */}
-            <button
-              onClick={() => router.push('/profile')}
-              title="Profile & Settings"
-              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-opacity hover:opacity-80 ${
-                darkMode ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-600'
-              }`}
-            >
-              {userName.charAt(0)}
-            </button>
+            {/* Avatar → Profile dropdown */}
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                title="Profile & Settings"
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ring-2 ring-transparent hover:ring-teal-400 ${
+                  darkMode ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-600'
+                } ${profileDropdownOpen ? 'ring-teal-400' : ''}`}
+              >
+                {userName.charAt(0)}
+              </button>
+
+              {profileDropdownOpen && (
+                <div className={`absolute right-0 top-11 w-56 rounded-2xl shadow-2xl border z-50 overflow-hidden animate-fade-in-up ${
+                  darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'
+                }`}>
+                  {/* User info header */}
+                  <div className={`px-4 py-3 border-b ${darkMode ? 'border-slate-700' : 'border-gray-100'}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-base mb-2 ${
+                      darkMode ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-600'
+                    }`}>
+                      {userName.charAt(0)}
+                    </div>
+                    <p className={`font-semibold text-sm truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>{userName}</p>
+                    <p className={`text-xs truncate ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email || ''}</p>
+                  </div>
+
+                  {/* Nav links */}
+                  <div className="py-1.5">
+                    {[
+                      { icon: BookMarked, label: 'My Questions', path: '/questions' },
+                      { icon: Settings,   label: 'Settings',     path: '/settings'  },
+                    ].map(({ icon: Icon, label, path }) => (
+                      <button
+                        key={label}
+                        onClick={() => { setProfileDropdownOpen(false); router.push(path); }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                          darkMode
+                            ? 'text-gray-300 hover:bg-slate-700 hover:text-white'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                      >
+                        <Icon size={16} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Logout */}
+                  <div className={`border-t py-1.5 ${darkMode ? 'border-slate-700' : 'border-gray-100'}`}>
+                    <button
+                      onClick={() => { setProfileDropdownOpen(false); handleLogout(); }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                        darkMode ? 'text-red-400 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50'
+                      }`}
+                    >
+                      <LogOut size={16} />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
