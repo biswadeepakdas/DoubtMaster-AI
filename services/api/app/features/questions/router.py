@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import AuthContext, get_current_user
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.solve_limits import assert_homework_solve_allowed
 from app.core import llm_router
 
 logger = logging.getLogger(__name__)
@@ -239,6 +240,8 @@ async def text_solve(
 ):
     if len(body.textQuestion.strip()) < 5:
         raise HTTPException(400, "Question too short")
+
+    await assert_homework_solve_allowed(db, ctx.user_id, ctx.role)
 
     # Call LLM
     resp = await llm_router.call("homework_solve", SOLVE_SYSTEM, body.textQuestion, max_tokens=4096)
@@ -472,6 +475,8 @@ async def image_solve(
     image_bytes = await image.read()
     if len(image_bytes) > 10 * 1024 * 1024:  # 10 MB limit
         raise HTTPException(400, "Image too large (max 10 MB)")
+
+    await assert_homework_solve_allowed(db, ctx.user_id, ctx.role)
 
     b64_image = base64.b64encode(image_bytes).decode()
     content_type = image.content_type or "image/jpeg"

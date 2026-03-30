@@ -97,10 +97,21 @@ export async function apiFetch(path, options = {}, _isRetry = false) {
   }
 
   if (!res.ok) {
+    const detail = body?.detail;
+    const message =
+      (detail && typeof detail === 'object' && detail.message) ||
+      (typeof detail === 'string' ? detail : null) ||
+      body?.error ||
+      body?.message ||
+      `Request failed (${res.status})`;
     throw {
-      message: body?.error || body?.message || `Request failed (${res.status})`,
-      code: body?.code || 'API_ERROR',
+      message,
+      code:
+        (detail && typeof detail === 'object' && detail.code) ||
+        body?.code ||
+        'API_ERROR',
       status: res.status,
+      detail: typeof detail === 'object' ? detail : undefined,
     };
   }
 

@@ -17,6 +17,7 @@ from app.core.auth import (
 )
 from app.core.audit import audit
 from app.core.database import get_db
+from app.core.solve_limits import get_homework_solve_quota
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -309,7 +310,9 @@ async def me(db: AsyncSession = Depends(get_db), ctx: AuthContext = Depends(get_
     user = result.mappings().one_or_none()
     if not user:
         raise HTTPException(404, "User not found")
-    return dict(user)
+    out = dict(user)
+    out["solveQuota"] = await get_homework_solve_quota(db, ctx.user_id, ctx.role)
+    return out
 
 
 # ── Refresh ───────────────────────────────────────────────────────────────────

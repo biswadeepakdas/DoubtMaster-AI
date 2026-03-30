@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Camera, BookOpen, Brain, Sun, Moon, Menu, X, ChevronRight,
@@ -71,6 +72,7 @@ export default function DashboardPage() {
   const [textQuestion, setTextQuestion] = useState('');
   const [isSolving, setIsSolving] = useState(false);
   const [solveError, setSolveError] = useState('');
+  const [solveErrorCode, setSolveErrorCode] = useState('');
   const [currentSolution, setCurrentSolution] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
 
@@ -249,6 +251,7 @@ export default function DashboardPage() {
   // Solve question via API
   const handleSolve = async () => {
     setSolveError('');
+    setSolveErrorCode('');
     setCurrentSolution(null);
     setEvaluation(null);
     setShowAllSteps(false);
@@ -275,6 +278,7 @@ export default function DashboardPage() {
         fetchDashboardData();
       } catch (err) {
         setSolveError(err.message || 'Something went wrong. Please try again.');
+        setSolveErrorCode(err.code || '');
       } finally {
         setIsSolving(false);
       }
@@ -304,7 +308,18 @@ export default function DashboardPage() {
           return;
         }
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || data.message || 'Failed to solve');
+        if (!res.ok) {
+          const d = data?.detail;
+          const msg =
+            (d && typeof d === 'object' && d.message) ||
+            (typeof d === 'string' ? d : null) ||
+            data.error ||
+            data.message ||
+            'Failed to solve';
+          const err = new Error(msg);
+          err.code = d && typeof d === 'object' ? d.code : undefined;
+          throw err;
+        }
         setCurrentSolution(data);
         setClassroomSession(null);
         if (classroomPollRef.current) clearInterval(classroomPollRef.current);
@@ -312,6 +327,7 @@ export default function DashboardPage() {
         fetchDashboardData();
       } catch (err) {
         setSolveError(err.message || 'Something went wrong. Please try again.');
+        setSolveErrorCode(err.code || '');
       } finally {
         setIsSolving(false);
       }
@@ -394,6 +410,10 @@ export default function DashboardPage() {
   const accuracy = progress?.overall?.accuracy ?? 0;
   const todaySolved = progress?.dailyGoal?.completed ?? 0;
   const weakTopics = progress?.weakTopics || [];
+
+  const solveQuota = user?.solveQuota;
+  const freeSolveLimitReached =
+    solveQuota && !solveQuota.unlimited && solveQuota.remaining === 0;
 
   // Build weekly activity from progress data
   const weeklyActivity = DAY_LABELS.map((label, i) => ({
@@ -741,6 +761,47 @@ export default function DashboardPage() {
               Snap a photo or type your question to get step-by-step solutions
             </p>
 
+            {solveQuota && !solveQuota.unlimited && (
+              <div
+                className={`mb-4 px-4 py-3 rounded-xl text-sm flex flex-wrap items-center justify-between gap-2 ${
+                  freeSolveLimitReached
+                    ? darkMode
+                      ? 'bg-amber-500/15 border border-amber-500/30 text-amber-100'
+                      : 'bg-amber-50 border border-amber-200 text-amber-900'
+                    : darkMode
+                      ? 'bg-slate-800/80 border border-slate-600 text-gray-300'
+                      : 'bg-white/80 border border-gray-200 text-gray-700'
+                }`}
+              >
+                <span>
+                  {freeSolveLimitReached ? (
+                    <>
+                      Free plan includes <strong>{solveQuota.limit}</strong> homework solves. You&apos;ve used them
+                      all — upgrade to <strong>Pro</strong> for unlimited solves.
+                    </>
+                  ) : (
+                    <>
+                      <strong>{solveQuota.remaining}</strong> free{' '}
+                      {solveQuota.remaining === 1 ? 'solve' : 'solves'} left
+                      {solveQuota.limit != null ? ` (of ${solveQuota.limit})` : ''}.
+                    </>
+                  )}
+                </span>
+                <Link
+                  href="/pricing"
+                  className={`shrink-0 font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                    freeSolveLimitReached
+                      ? 'bg-amber-500 text-white hover:bg-amber-600'
+                      : darkMode
+                        ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30'
+                        : 'bg-teal-600 text-white hover:bg-teal-700'
+                  }`}
+                >
+                  {freeSolveLimitReached ? 'View Pro plans' : 'Upgrade'}
+                </Link>
+              </div>
+            )}
+
             {/* Mode toggle */}
             <div className="flex gap-2 mb-4">
               <button
@@ -769,8 +830,10 @@ export default function DashboardPage() {
               <div>
                 <label
                   htmlFor="photo-upload"
-                  className={`block border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
-                    darkMode ? 'border-slate-600 hover:border-teal-500/50' : 'border-gray-300 hover:border-teal-400'
+                  className={`block border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
+                    freeSolveLimitReached
+                      ? 'border-slate-500 opacity-50 cursor-not-allowed pointer-events-none'
+                      : `cursor-pointer ${darkMode ? 'border-slate-600 hover:border-teal-500/50' : 'border-gray-300 hover:border-teal-400'}`
                   }`}
                 >
                   <input
@@ -779,6 +842,7 @@ export default function DashboardPage() {
                     accept="image/jpeg,image/png,image/webp,image/heic"
                     capture="environment"
                     className="hidden"
+                    disabled={freeSolveLimitReached}
                     onChange={(e) => { setSelectedFile(e.target.files?.[0] || null); setSolveError(''); }}
                   />
                   <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
@@ -804,10 +868,14 @@ export default function DashboardPage() {
                   )}
                 </label>
                 <button
+                  type="button"
                   onClick={handleSolve}
-                  disabled={isSolving}
-                  style={{ background: 'linear-gradient(to right, #1e3a5f, #1e40af)', opacity: isSolving ? 0.7 : 1 }}
-                  className="mt-3 w-full text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isSolving || freeSolveLimitReached}
+                  style={{
+                    background: 'linear-gradient(to right, #1e3a5f, #1e40af)',
+                    opacity: isSolving || freeSolveLimitReached ? 0.55 : 1,
+                  }}
+                  className="mt-3 w-full text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                 >
                   {isSolving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Solving...</> : <><Sparkles size={18} /> Solve with AI</>}
                 </button>
@@ -818,18 +886,23 @@ export default function DashboardPage() {
                   placeholder="Type or paste your question here... (Hindi, English, or any supported language)"
                   rows={4}
                   value={textQuestion}
+                  disabled={freeSolveLimitReached}
                   onChange={(e) => { setTextQuestion(e.target.value); setSolveError(''); }}
-                  className={`w-full rounded-xl p-4 text-sm outline-none resize-none transition-colors ${
+                  className={`w-full rounded-xl p-4 text-sm outline-none resize-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     darkMode
                       ? 'bg-slate-800 border border-slate-700 text-gray-200 placeholder-gray-500 focus:border-teal-500'
                       : 'bg-white border border-gray-200 text-gray-700 placeholder-gray-400 focus:border-teal-400'
                   }`}
                 />
                 <button
+                  type="button"
                   onClick={handleSolve}
-                  disabled={isSolving}
-                  style={{ background: 'linear-gradient(to right, #1e3a5f, #1e40af)', opacity: isSolving ? 0.7 : 1 }}
-                  className="w-full text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isSolving || freeSolveLimitReached}
+                  style={{
+                    background: 'linear-gradient(to right, #1e3a5f, #1e40af)',
+                    opacity: isSolving || freeSolveLimitReached ? 0.55 : 1,
+                  }}
+                  className="w-full text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                 >
                   {isSolving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Solving...</> : <><Sparkles size={18} /> Solve with AI</>}
                 </button>
@@ -840,6 +913,14 @@ export default function DashboardPage() {
             {solveError && (
               <div className="mt-3 p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20">
                 <p className="text-sm text-red-600 dark:text-red-400">{solveError}</p>
+                {solveErrorCode === 'FREE_SOLVE_LIMIT' && (
+                  <Link
+                    href="/pricing"
+                    className="inline-block mt-2 text-sm font-semibold text-teal-600 dark:text-teal-400 hover:underline"
+                  >
+                    See Pro plans →
+                  </Link>
+                )}
               </div>
             )}
           </div>
