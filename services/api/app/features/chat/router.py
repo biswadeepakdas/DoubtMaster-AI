@@ -37,8 +37,15 @@ async def followup(
 
     system = body.systemPrompt
 
-    # Build message history for Claude
+    # Build message history for Claude — must end with a user message
     messages = [{"role": m.role, "content": m.content} for m in body.messages]
+
+    # Strip any trailing assistant messages (Claude does not support prefill)
+    while messages and messages[-1]["role"] == "assistant":
+        messages.pop()
+
+    if not messages or messages[-1]["role"] != "user":
+        raise HTTPException(400, "Conversation must end with a user message")
 
     client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
