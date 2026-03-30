@@ -346,10 +346,11 @@ body {
 .border-teal-500\/30,
 .border-emerald-500\/30 { border-color: rgba(37, 99, 235, 0.4) !important; }
 
+/* Only remap gradient endpoint colors. Do not set --tw-gradient-stops here:
+   a forced from→transparent stop breaks any from-teal + to-emerald combo and
+   leaves buttons nearly transparent so text-white vanishes on white cards. */
 .from-teal-500, .from-emerald-500, .from-teal-600, .from-emerald-600 {
   --tw-gradient-from: #2563EB var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: rgb(37 99 235 / 0) var(--tw-gradient-to-position) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 .to-teal-500, .to-emerald-500, .to-teal-600, .to-emerald-600 {
   --tw-gradient-to: #0284C7 var(--tw-gradient-to-position) !important;
