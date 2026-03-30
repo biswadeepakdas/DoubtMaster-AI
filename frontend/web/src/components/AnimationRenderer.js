@@ -23,6 +23,10 @@ export default function AnimationRenderer({ code, title, description, className 
     let cleanCode = code.trim();
     cleanCode = cleanCode.replace(/^```(?:javascript|js)?\s*\n?/, '').replace(/\n?```\s*$/, '');
 
+    // Same-origin p5 so animations work on locked-down networks that block third-party CDNs.
+    const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+    const p5ScriptSrc = origin ? `${origin}/vendor/p5.min.js` : 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js';
+
     // Build the HTML document for the iframe
     const html = `<!DOCTYPE html>
 <html>
@@ -40,7 +44,7 @@ export default function AnimationRenderer({ code, title, description, className 
     }
     canvas { border-radius: 8px; }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"><\/script>
+  <script src="${p5ScriptSrc}"><\/script>
 </head>
 <body>
   <script>

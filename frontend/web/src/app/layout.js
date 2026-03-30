@@ -1,6 +1,9 @@
 import './globals.css';
 
+const defaultSite = 'https://www.doubtmaster.ai';
+
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || defaultSite),
   title: 'DoubtMaster AI - Clear Doubts. Think Better.',
   description: 'India\'s #1 AI homework solver. Solve any NCERT, JEE, or NEET question instantly with step-by-step solutions. Free for all NCERT questions.',
   keywords: 'homework solver, NCERT solutions, JEE preparation, NEET preparation, AI tutor, CBSE, ICSE, Indian students, DoubtMaster AI',

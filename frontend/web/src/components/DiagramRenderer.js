@@ -16,11 +16,17 @@ export default function DiagramRenderer({ code, className = '' }) {
     if (!code) return;
 
     let mermaidCode = cleanMermaidCode(code);
-    if (!mermaidCode || mermaidCode.length < 10) return;
-
     let cancelled = false;
 
     async function renderDiagram() {
+      if (!mermaidCode || mermaidCode.length < 10) {
+        if (!cancelled) {
+          setSvg('');
+          setError('Diagram could not be rendered');
+        }
+        return;
+      }
+
       try {
         const mermaid = (await import('mermaid')).default;
         mermaid.initialize({
@@ -47,7 +53,7 @@ export default function DiagramRenderer({ code, className = '' }) {
             nodeSpacing: 40,
             rankSpacing: 50,
           },
-          securityLevel: 'strict',
+          securityLevel: 'loose',
         });
 
         const id = 'mermaid-' + Math.random().toString(36).slice(2, 9);
@@ -121,6 +127,71 @@ export default function DiagramRenderer({ code, className = '' }) {
           }
         }
 
+        // Last resort: SVG text labels (avoids HTML-in-label parse failures from model output)
+        if (!cancelled) {
+          try {
+            const mermaid = (await import('mermaid')).default;
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                primaryColor: '#DBEAFE',
+                primaryTextColor: '#0F172A',
+                primaryBorderColor: '#2563EB',
+                lineColor: '#60A5FA',
+                secondaryColor: '#E0F2FE',
+                tertiaryColor: '#F8FAFC',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '16px',
+                nodeBorder: '#2563EB',
+                mainBkg: '#DBEAFE',
+                clusterBkg: '#E0F2FE',
+                edgeLabelBackground: '#0F172A',
+              },
+              flowchart: {
+                htmlLabels: false,
+                curve: 'basis',
+                padding: 12,
+                nodeSpacing: 40,
+                rankSpacing: 50,
+              },
+              securityLevel: 'loose',
+            });
+            const id3 = 'mermaid-svglabels-' + Math.random().toString(36).slice(2, 9);
+            const stripped = mermaidCode.replace(/^\s*style\s+.*$/gm, '').trim();
+            const { svg: svg3 } = await mermaid.render(id3, stripped || mermaidCode);
+            const tweaked = svg3.replace(
+              '</style>',
+              `
+              .edgeLabel, .edgeLabel p {
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                color: #F8FAFC !important;
+                fill: #F8FAFC !important;
+              }
+              .label, .nodeLabel, .label text {
+                font-size: 15px !important;
+                font-weight: 600 !important;
+                fill: #0F172A !important;
+              }
+              </style>`
+            );
+            if (!cancelled) {
+              setSvg(
+                DOMPurify.sanitize(tweaked, {
+                  USE_PROFILES: { svg: true, svgFilters: true },
+                  ADD_TAGS: ['style'],
+                  ADD_ATTR: ['class', 'id', 'style', 'transform'],
+                })
+              );
+              setError('');
+              return;
+            }
+          } catch {
+            // Fall through
+          }
+        }
+
         if (!cancelled) {
           setError('Diagram could not be rendered');
           setSvg('');
@@ -178,7 +249,7 @@ function cleanMermaidCode(code) {
     cleaned = fenceMatch[1].trim();
   }
 
-  // Strip remaining fence markers
+  // Strip remaining fence markers (```mermaid already handled; generic ``` here)
   cleaned = cleaned.replace(/^```\s*\n?/, '').replace(/\n?```\s*$/, '');
 
   // Replace literal \n with real newlines (LLM sometimes returns escaped)
