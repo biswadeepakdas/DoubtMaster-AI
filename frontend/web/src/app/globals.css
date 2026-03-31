@@ -346,14 +346,29 @@ body {
 .border-teal-500\/30,
 .border-emerald-500\/30 { border-color: rgba(37, 99, 235, 0.4) !important; }
 
-/* Only remap gradient endpoint colors. Do not set --tw-gradient-stops here:
-   a forced from→transparent stop breaks any from-teal + to-emerald combo and
-   leaves buttons nearly transparent so text-white vanishes on white cards. */
-.from-teal-500, .from-emerald-500, .from-teal-600, .from-emerald-600 {
-  --tw-gradient-from: #2563EB var(--tw-gradient-from-position) !important;
+/* Do not override --tw-gradient-from / --tw-gradient-to for teal utilities:
+   Tailwind v4 builds bg-gradient-to-r from those vars; partial overrides leave
+   an empty or transparent gradient so text-white disappears on white cards. */
+
+/* Primary CTAs on auth (login/signup): explicit fill + label color — immune to gradient var bugs */
+.dm-cta-primary {
+  background-color: #2563eb !important;
+  background-image: linear-gradient(to right, #2563eb, #0284c7) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
-.to-teal-500, .to-emerald-500, .to-teal-600, .to-emerald-600 {
-  --tw-gradient-to: #0284C7 var(--tw-gradient-to-position) !important;
+.dm-cta-primary:hover:not(:disabled) {
+  background-image: linear-gradient(to right, #1d4ed8, #0369a1) !important;
+}
+
+.dm-cta-green {
+  background-color: #16a34a !important;
+  background-image: linear-gradient(to right, #16a34a, #059669) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+.dm-cta-green:hover:not(:disabled) {
+  background-image: linear-gradient(to right, #15803d, #047857) !important;
 }
 
 .shadow-teal-500\/25,

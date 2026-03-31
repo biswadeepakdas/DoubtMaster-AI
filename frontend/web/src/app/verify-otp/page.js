@@ -257,7 +257,7 @@ function VerifyOtpContent() {
                 if (code.length === OTP_LENGTH) verifyOtp(code);
               }}
               disabled={loading || otp.some(d => d === '')}
-              className="w-full mt-6 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="dm-cta-green w-full mt-6 flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Verify & Continue
             </button>
