@@ -199,6 +199,111 @@ async def init_db():
             ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE
         """))
 
+        # ── Study Streaks & Daily Goals ───────────────────────────────────────
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS daily_goals (
+                id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                date             DATE NOT NULL DEFAULT CURRENT_DATE,
+                target_solves    INTEGER NOT NULL DEFAULT 5,
+                target_minutes   INTEGER NOT NULL DEFAULT 30,
+                actual_solves    INTEGER DEFAULT 0,
+                actual_minutes   INTEGER DEFAULT 0,
+                completed        BOOLEAN DEFAULT false,
+                created_at       TIMESTAMPTZ DEFAULT now(),
+                updated_at       TIMESTAMPTZ DEFAULT now(),
+                UNIQUE(user_id, date)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_daily_goals_user_date
+            ON daily_goals(user_id, date DESC)
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS streak_freezes (
+                id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                used_on    DATE NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT now(),
+                UNIQUE(user_id, used_on)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS achievements (
+                id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                badge_key   TEXT NOT NULL,
+                title       TEXT NOT NULL,
+                description TEXT,
+                icon        TEXT DEFAULT 'award',
+                earned_at   TIMESTAMPTZ DEFAULT now(),
+                UNIQUE(user_id, badge_key)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_achievements_user
+            ON achievements(user_id)
+        """))
+
+        # ── Bookmarks & Study Collections ─────────────────────────────────────
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS study_collections (
+                id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name        TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                color       TEXT DEFAULT '#6366f1',
+                icon        TEXT DEFAULT 'bookmark',
+                is_default  BOOLEAN DEFAULT false,
+                created_at  TIMESTAMPTZ DEFAULT now(),
+                updated_at  TIMESTAMPTZ DEFAULT now()
+            )
+        """))
+        await conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_collections_user
+            ON study_collections(user_id)
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS bookmarks (
+                id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                question_id     UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+                collection_id   UUID REFERENCES study_collections(id) ON DELETE SET NULL,
+                note            TEXT DEFAULT '',
+                created_at      TIMESTAMPTZ DEFAULT now(),
+                UNIQUE(user_id, question_id)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_bookmarks_user
+            ON bookmarks(user_id)
+        """))
+        await conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_bookmarks_collection
+            ON bookmarks(collection_id)
+        """))
+
+        # ── Weakness tracking (enriched) ──────────────────────────────────────
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS weakness_snapshots (
+                id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                subject        TEXT NOT NULL,
+                topic          TEXT NOT NULL,
+                error_count    INTEGER DEFAULT 0,
+                total_attempts INTEGER DEFAULT 0,
+                confidence     REAL DEFAULT 0.0,
+                last_seen_at   TIMESTAMPTZ DEFAULT now(),
+                created_at     TIMESTAMPTZ DEFAULT now(),
+                updated_at     TIMESTAMPTZ DEFAULT now(),
+                UNIQUE(user_id, subject, topic)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_weakness_user
+            ON weakness_snapshots(user_id)
+        """))
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
